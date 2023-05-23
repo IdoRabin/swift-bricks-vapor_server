@@ -1,0 +1,36 @@
+#extend("master"):
+#export("body"):
+<div class="container my-5 about_page col-lg-8">
+    <div class="row rounded-5 shadow-lg grey-border">
+        <!-- leading segment -->
+        <div class="col-7 p-5 pt-5 pe-5 align-items-center">
+            <!-- Title and running text -->
+            <h4 class="display-6 fw-bold lh-1">About bricks dashboard</h4>
+            <p class="lead">
+                Control your bricks server with ease and comfort. Manage users, their roles and review stats and logs. Pause or resume the server and much more.
+            </p>
+            
+            <!-- Buttons -->
+            <div class="mt-3 d-flex justify-content-center">
+                #if(isLoggedIn):
+                <ul class="nav col-12 col-lg-auto me-lg-auto justify-content-center mb-md-0">
+                    <li><a href="/dashboard" role="button" class="btn btn-secondary me-2">Dashboard</a></li>
+                    <li><a href="/dashboard/stats" role="button" class="btn btn-primary">Stats</a></li>
+                </ul>
+                #else:
+                <ul class="nav">
+                    <li><a href="/dashboard/login" role="button" class="btn btn-outline-dark me-2">Login now</a></li>
+                    <li><a href="/dashboard/register" role="button" class="btn btn-warning">Register</a></li>
+                </ul>
+                #endif
+            </div>
+        </div>
+        
+        <!-- trailing segment -->
+        <div class="col-5 p-0 m-0 brick-bkg rounded-5-end" style="overflow:clip"/>
+            <div class="p-0 m-0 h-100 brick-gradiant" style="opacity:0.8;"/>
+        </div>
+    </div>
+</div>
+#endexport
+#endextend

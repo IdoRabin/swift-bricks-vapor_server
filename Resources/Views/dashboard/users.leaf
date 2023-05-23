@@ -1,0 +1,7 @@
+#extend("master"):
+#export("body"):
+<div class="users">
+    Users body
+</div>
+#endexport
+#endextend

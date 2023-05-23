@@ -1,0 +1,58 @@
+#extend("master"):
+#export("body"):
+
+<div class="container my-5 about_page col-lg-8">
+    <div class="row rounded-5 shadow-lg grey-border">
+        <!-- leading segment -->
+        <div class="col-5 p-5 pt-5 pe-5 align-items-center">
+            <!-- Title and running text -->
+            <h4 class="display-6 fw-bold lh-1">Login</h4>
+            <p class="lead">
+            Login to the bricks server. If you don't have a user / password or can't register, talk to your admin | team lead | security officer to get yourself registered for your organization.
+            </p>
+        </div>
+        
+        <!-- trailing segment -->
+        <div class="col-7 p-0 m-0 brick-bkg-50 rounded-5-end" style="overflow:clip"/>
+        <div class="p-0 m-0 h-100 brick-gradiant-whiter-50">
+            <form class="m-0 p-5" autocomplete="on" onsubmit="onsubmit();">
+                <div class="row form-floating mb-3">
+                    <input class="form-control #(pageParams.usernameValidationClass)" id="username" placeholder="name@example.com or username" autocomplete="username"/>
+                    <label for="floatingInput">Email or username</label>
+                    <div id="invalid_username" class="invalid-feedback fw-bold">
+                        #(pageParams.invalidUsernameText)
+                    </div>
+                </div>
+                <div class="row form-floating mb-3">
+                    <input type="password" class="form-control #(pageParams.passwordValidationClass)" id="password" placeholder="Password" autocomplete="current-password"/>
+                    <label for="floatingPassword">Password</label>
+                    <div id="invalid_password" class="invalid-feedback fw-bold">
+                        #(pageParams.invalidPasswordText)
+                    </div>
+                </div>
+                <div class="row">
+                    <label>
+                        <input type="checkbox" value="remember-me" id="rememberme">&nbsp;Remember me
+                    </label>
+                </div>
+                <div class="row mt-3">
+                    <button class="w-100 btn btn-lg btn-primary" id="submit">Login</button>
+                    <div class="row form-floating mt-3 mb-3">
+                        <input type="hidden" class="#(pageParams.usernameAndPwdValidationClass)" id="global_warning"/>
+                        <label for="warning"></label>
+                        <div id="invalid_global" class="invalid-feedback fw-bold" style="background-color=">
+                            #(pageParams.invalidUsernameAndPwdText)
+                        </div>
+                    </div>
+                </div>
+                <small class="text">By tapping/clicking the login button, you accept the
+                    <a href="/dashboard/terms">terms of use.</a> and undertake them upon you and / or your employing organization.
+                </small>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+<script src="/web_scripts/login.js"></script>
+#endexport
+#endextend

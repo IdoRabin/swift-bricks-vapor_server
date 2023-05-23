@@ -1,0 +1,117 @@
+:root {
+    /*    // peru ? tan ? wheat ? */
+  --main-bg-color : #eeeeeeff;  /* light grey */
+  --main-text-color: #444444ff; /* dark grey */
+  --title-color: #4183c4ff;     /* light dirty sky blue */
+  --separator-color: #777777aa; /* mid grey */
+
+  --app-success-color: #19CC54ff; /* d green */
+  --app-failure-color: #dc3545ff; /* d red */
+  
+  --link-color: #4183c4ff;      /* sky blue */
+  --link-hover-color: rgb(3, 5, 7);
+
+  --smallpad : 4px;
+  --bigpad : 14px;
+  --navbar-height : 60px;
+  --footer-height : 30px;
+  --body-height : calc(100% - var(--navbar-height) - var(--footer-height));
+}
+
+.grey-border {
+    border: 1px solid #cccccc !important;
+}
+
+.debug-border {
+    border: 1px solid green !important;
+}
+
+body {
+    overflow-x: initial !important;
+    display: inline-block;
+    color:var(--main-text-color);
+    position: absolute;
+    
+    min-width: 100% !important;
+    height: 100% !important;
+    min-height: 100vh;
+    max-height: 100vh;
+    height: 100vh;
+    width: 100vw;
+    
+/*    background-color:var(--main-bg-color);*/
+}
+
+.main-body-wrapper {
+    min-height: var(--body-height);
+    background: linear-gradient(#ffffff50, #f6f6f6ff);
+    /*  almost transparent border:  */
+    border: 1px solid #01010101 !important;
+}
+
+.main-body {
+    
+}
+
+.bg-image {
+    
+}
+
+.under-construction-ribbon-bkg {
+    background-image: url("/images/under_construction.png");
+    background-position: left top;
+    background-repeat: repeat-x;
+    background-size: 54px;
+    background-color: #ffcc0088;
+    border-radius: 0px 0px 10px 10px;
+    
+    font-family: SF-Mono, sans-serif;
+    font-style: bold;
+    font-weight: 800;
+    font-size: 18px;
+    text-shadow: -1px -1px 0 #fe8, 1px -1px 0 #fe8, -1px 1px 0 #fe8, 1px 1px 0 #fe8;
+    color: black;
+    text-align:center;
+}
+
+.brick-bkg-50 {
+    background-image: url("/images/bricks_v_bkg_50.jpg");
+    background-position: right top;
+    background-size: 100%;
+}
+
+.brick-bkg {
+    background-image: url("/images/bricks_v_bkg.jpg");
+    background-position: right top;
+    background-size: 100%;
+}
+
+.brick-gradiant {
+    background: linear-gradient(127deg,
+    rgba(255,255,255,0) 0%,
+    rgba(245,132,90,0.7) 50%,
+    rgba(171,45,0,1) 100%);
+}
+
+.brick-gradiant-whiter-50 {
+    background: linear-gradient(127deg,
+    rgba(255,255,255,0.7) 0%,
+    rgba(245,132,90,0.35) 50%,
+    rgba(211,85,45,0.5) 100%);
+}
+
+.brick-gradiant-50 {
+    background: linear-gradient(127deg,
+    rgba(255,255,255, 0.1) 0%,
+    rgba(245,132,90,0.35) 50%,
+    rgba(171,45,0,0.5) 100%);
+}
+
+
+.rounded-5-start {
+    border-radius: 30px 0px 0px 30px;
+}
+
+.rounded-5-end {
+    border-radius: 0px 30px 30px 0px;
+}

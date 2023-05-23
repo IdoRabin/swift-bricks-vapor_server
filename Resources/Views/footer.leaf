@@ -1,0 +1,5 @@
+<nav class="navbar fixed-bottom navbar-dark bg-dark px-1 py-1">
+    <div class="container-fluid mx-0 my-0 px-2 py-0">
+        <a class="navbar-brand text-muted fs-6 mx-0 my-0 px-2 py-0" href="/dashboard">&#169; Bricks ltd 2022, Ido Rabin 2022</a>
+    </div>
+</nav>

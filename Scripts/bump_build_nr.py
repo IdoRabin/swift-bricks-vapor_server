@@ -15,7 +15,7 @@ import fileinput
 from tempfile import NamedTemporaryFile
 
 
-FILEPATH = '/Users/syncme/vapor/bserver/Sources/App/AppVersion.swift'
+FILEPATH = '/Users/syncme/vapor/bricks_server/Sources/App/AppVersion.swift'
 print(f'= bump_build_nr.py is starting: =')
 
 if not os.path.isfile(FILEPATH):

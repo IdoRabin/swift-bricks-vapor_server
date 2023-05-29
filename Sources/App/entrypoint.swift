@@ -2,6 +2,11 @@ import Vapor
 import Dispatch
 import Logging
 
+import DSLogger
+import MNUtils
+
+fileprivate let dlog : DSLogger? = DLog.forClass("Entrypoint")?.setting(verbose: false)
+
 /// This extension is temporary and can be removed once Vapor gets this support.
 private extension Vapor.Application {
     static let baseExecutionQueue = DispatchQueue(label: "vapor.codes.entrypoint")
@@ -23,6 +28,8 @@ private extension Vapor.Application {
 @main
 enum Entrypoint {
     static func main() async throws {
+        dlog?.info("launch STARTED")
+        
         var env = try Environment.detect()
         try LoggingSystem.bootstrap(from: &env)
         

@@ -2,28 +2,36 @@
 import PackageDescription
 
 let package = Package(
+    // 💧 A Vapor server-side Swift web f ramework.
     name: "bricks_server",
     platforms: [
         .macOS(.v12)
     ],
     dependencies: [
-        // 💧 A server-side Swift web framework.
+        // 3Rd party
         .package(url: "https://github.com/vapor/vapor.git", from: "4.76.0"),
         .package(url: "https://github.com/vapor/fluent.git", from: "4.8.0"),
         .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.7.2"),
         .package(url: "https://github.com/vapor/leaf.git", from: "4.0.0"),
         .package(url: "https://github.com/vapor/jwt.git", from: "4.0.0"),
+        
+         // In-House pakcages
+        .package(path: "../../xcode/DSLogger"),
         .package(path: "../../xcode/MNUtils/MNUtils"),
     ],
     targets: [
         .executableTarget(
             name: "App",
             dependencies: [
+                // 3Rd party
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentPostgresDriver", package: "fluent-postgres-driver"),
                 .product(name: "Leaf", package: "leaf"),
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "JWT", package: "jwt"),
+                
+                // In-House pakcages
+                .product(name: "DSLogger", package: "DSLogger"),
                 .product(name: "MNUtils", package: "MNUtils"),
             ],
             swiftSettings: [

@@ -5,7 +5,7 @@ let package = Package(
     // 💧 A Vapor server-side Swift web f ramework.
     name: "bricks_server",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v12),
     ],
     dependencies: [
         // 3Rd party
@@ -18,10 +18,11 @@ let package = Package(
          // In-House pakcages
         .package(path: "../../xcode/DSLogger"),
         .package(path: "../../xcode/MNUtils/MNUtils"),
+        // .package(path: "../../vapor/RRabac"),
     ],
     targets: [
         .executableTarget(
-            name: "App",
+            name: "BricksServer",
             dependencies: [
                 // 3Rd party
                 .product(name: "Fluent", package: "fluent"),
@@ -33,6 +34,7 @@ let package = Package(
                 // In-House pakcages
                 .product(name: "DSLogger", package: "DSLogger"),
                 .product(name: "MNUtils", package: "MNUtils"),
+                // .product(name: "RRabac", package: "RRabac"),
             ],
             swiftSettings: [
                 // Enables better optimizations when building in Release
@@ -41,17 +43,20 @@ let package = Package(
                 .define("PRODUCTION", .when(configuration: .release)),
                 .define("DEBUG", .when(configuration: .debug)),
                 .define("VAPOR"), // Vapor framework, to distinguish in classes that are also used in iOS / macOS.
+                .define("NIO"),
             ]
         ),
         .testTarget(
             name: "AppTests",
             dependencies: [
-                .target(name: "App"),
+                .target(name: "BricksServer"),
                 .product(name: "XCTVapor", package: "vapor"),
             ],
             swiftSettings: [
                 .define("TESTING"),
             ]
         )
-    ]
+    ],
+    
+    swiftLanguageVersions: [.v5]
 )

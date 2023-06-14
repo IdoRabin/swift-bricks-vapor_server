@@ -58,11 +58,11 @@ struct ErrorOriginatingPathStorageKey : ReqStorageKey {
 // MARK: class behaving similar to an enum of all ReqStorageKeys:
 class ReqStorageKeys {
     // Equivalents of RouteInfoCodingKeys:
-    static let user = UserStorageKey.self
-    static let selfUserID = SelfUserIDStorageKey.self
-    static let selfUser = SelfUserStorageKey.self
-    static let accessToken = AccessTokenStorageKey.self
-    static let selfAccessToken = SelfAccessTokenStorageKey.self
+//    static let user = UserStorageKey.self
+//    static let selfUserID = SelfUserIDStorageKey.self
+//    static let selfUser = SelfUserStorageKey.self
+//    static let accessToken = AccessTokenStorageKey.self
+//    static let selfAccessToken = SelfAccessTokenStorageKey.self
     static let requestId = RequestIdStorageKey.self
     static let redirectedFrom = RedirectedFromStorageKey.self
     static let contextText = ContextTextStorageKey.self
@@ -80,11 +80,11 @@ class ReqStorageKeys {
     static let userTokenMakeIfMissing = UserTokenMakeIfMissingKey.self
     
     static var all : [any ReqStorageKey.Type]  = [
-        ReqStorageKeys.user,
-        ReqStorageKeys.selfUserID,
-        ReqStorageKeys.selfUser,
-        ReqStorageKeys.accessToken,
-        ReqStorageKeys.selfAccessToken,
+//        ReqStorageKeys.user,
+//        ReqStorageKeys.selfUserID,
+//        ReqStorageKeys.selfUser,
+//        ReqStorageKeys.accessToken,
+//        ReqStorageKeys.selfAccessToken,
         ReqStorageKeys.requestId,
         ReqStorageKeys.redirectedFrom,
         ReqStorageKeys.errorCode,

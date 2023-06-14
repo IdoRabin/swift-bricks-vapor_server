@@ -14,20 +14,17 @@ import MNUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("AppSettings")?.setting(verbose: false)
 
-// A singleton for all app settings, saves and loads from a json file the last saved settings.
-// "Other" are all settings properties that are distributed around the app as properties of other classes. They are still connected and saved into this settings file, under the "other" dictionary.
-final class AppSettings : AppSettingProvider, JSONFileSerializable {
-    func blockChanges(block: (AppSettingProvider) -> Void) {
-        
-    }
-    
-    
+// A singleton for all app settingsåå, saves and loads from a json file the last saved settings.
+// "Other" are all settings properties that are distributed around the app as properties of other classes. They åare still connected and saved into this settings file, under the "other" dictionary.
+final actor AppSettings : AppSettingProvider, JSONFileSerializable {
     #if VAPOR
     static let FILENAME = AppConstants.BSERVER_APP_SETTINGS_FILENAME
     #else
     static let FILENAME = AppConstants.CLIENT_SETTINGS_FILENAME
     #endif
     
+    // MARK: Const
+    // MARK: Static
     static var _isLoaded : Bool = false
     static var _initingShared : Bool = false
     static var _defaultResponWithReqId = Dictionary<BuildType, Bool>(uniqueKeysWithValues:[(BuildType.all, true)])
@@ -35,13 +32,70 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     static var _defaultParamKeysToNeverRedirect : [String] = ["password", "pwd", "email", "phoneNr", "phoneNumber" ,"phone", "token",
                                                          "accessToken", "user"]
     
+    // MARK: Private Properties / members
     @SkipEncode private var _changes : [String] = []
     @SkipEncode private var _isLoading : Bool = false
     @SkipEncode private var _isBlockChanges : Bool = false
     
+    // MARK: Public Properties / members
+    // var other: [String : Any]
+    
+    var wasChanged : Bool {
+        return _changes.count > 0
+    }
+    
+    static var isLoaded : Bool {
+        return Self._isLoaded
+    }
+    
+    var isLoaded : Bool {
+        return Self.isLoaded && !_isLoading
+    }
+    
+    // MARK: Lifecycle
+    private static var _shared : AppSettings? = nil
+    public static func shared(_ block : (_ appSettings : AppSettings)->Void) {
+        
+    }
+    
+    // MARK: Private
+    
+    // MARK: Public
+    
+    // MARK: AppSettingProvider
+    func noteChange(_ change: String, newValue: Any) {
+            
+    }
+    
+    func blockChanges(block: (AppSettingProvider) -> Void) {
+        
+    }
+    
+    func resetToDefaults() {
+        
+    }
+    
+    func saveIfNeeded() -> Bool {
+        
+    }
+    
+    func save() -> Bool {
+        
+    }
+    
+    static func loadFromJSON<T>(_ fileurl: URL) -> Result<T, Error> where T : MNUtils.JSONFileSerializable {
+        
+    }
+    
+}
+
+/*
+final class AppSettings : AppSettingProvider, JSONFileSerializable {
+    
+    
     struct AppSettingsGlobal : Codable {
         @AppSettable(name:"global.newUsernameAllowedTypes", default:UsernameType.allActive) var newUsernameAllowedTypes : [UsernameType]
-        @AppSettable(name:"global.existingAllowedTypes", default:UsernameType.allActive) var existingAllowedTypes : [UsernameType]
+        @AppSettable(name:"global.existingAllowedTypes", default:UsernameType.allActive) var existingUsernameAllowedTypes : [UsernameType]
     }
     
     struct AppSettingsClient : Codable {
@@ -107,17 +161,6 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     var debug : AppSettingsDebug?
     var other : [String:Any] = [:]
     
-    var wasChanged : Bool {
-        return _changes.count > 0
-    }
-    
-    static var isLoaded : Bool {
-        return Self._isLoaded
-    }
-    
-    var isLoaded : Bool {
-        return Self.isLoaded && !_isLoading
-    }
     
     // MARK: Private
     
@@ -197,7 +240,7 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
         }
     }
     
-    func blockChanges(block:(_ settings : AppSettings)->Void) {
+    func blockChanges(block:(_ settingsProvider : AppSettingProvider)->Void) {
         self._isBlockChanges = true
         block(self)
         self._isBlockChanges = false
@@ -205,7 +248,7 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     }
     
     func resetToDefaults() {
-        self.global.existingAllowedTypes = UsernameType.allActive
+        self.global.existingUsernameAllowedTypes = UsernameType.allActive
         self.global.newUsernameAllowedTypes = UsernameType.allActive
         self.saveIfNeeded()
     }
@@ -377,3 +420,4 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     }
 }
 
+*/

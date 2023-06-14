@@ -22,7 +22,7 @@ enum PreRelease: String {
 let APP_NAME_STR = Bundle.main.bundleName ?? "Bricks Server"
 
 // String fields allow only alphanumerics and a hyphen (-)
-let APP_BUILD_NR: Int = 1755
+let APP_BUILD_NR: Int = 1846
 let APP_BUILD_VERSION = Semver(
     major: 0,
     minor: 1,

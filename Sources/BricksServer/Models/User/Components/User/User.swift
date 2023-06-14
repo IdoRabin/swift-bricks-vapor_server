@@ -15,7 +15,7 @@ import Vapor
 import Fluent
 #endif
 
-typealias Users = [User]
+// typealias Users = [User]
 
 fileprivate let dlog : DSLogger? = DLog.forClass("User")
 fileprivate var _userInstancesCount : UInt64 = 0
@@ -39,7 +39,10 @@ enum UsernameType : String, AppModelStrEnum, Codable {
 }
 
 // MARK: User final class
+
 // TODO: check why final? does Vapor/Fluent require it be final?
+
+/*
 final class User : JSONSerializable, MNUIDable {
     
     // MARK: Constants
@@ -501,3 +504,4 @@ extension Sequence where Element == User {
 //    fileprivate func sanitizeName(candidate:String) ->AppResultUpdated<String> {
 //        return Self.sanitizeName(candidate:candidate, forUser:self)
 //    }
+*/

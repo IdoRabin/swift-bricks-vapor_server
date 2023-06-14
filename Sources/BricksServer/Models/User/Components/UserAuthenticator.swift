@@ -8,6 +8,7 @@ import Vapor
 import FluentKit
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("UserAuthenticator")
 
@@ -23,6 +24,7 @@ struct UserTokenCreateIfExpiredKey : /*Vapor.Utilities.*/ReqStorageKey  {
 class UserPasswordAuthenticator : BasicAuthenticator {
 
     func authenticate(basic: BasicAuthorization, for req: Request) -> EventLoopFuture<Void> {
+        /* UNCOMMENT: 
         let inputUsernameStr = basic.username
         req.logger.info("authenticate(basic: req: \(req.url.string) username:\(inputUsernameStr) pass:\(basic.password)")
         let queryFuture = User.query(on: req.db).filter(\.$username ~= inputUsernameStr).first()
@@ -54,11 +56,13 @@ class UserPasswordAuthenticator : BasicAuthenticator {
             }
         }
         
-        return result // req.eventLoop.makeFailedFuture(Abort(.unauthorized))
+        return result //
+         */
+        return req.eventLoop.makeFailedFuture(Abort(.unauthorized))
     }
     
 }
-
+/*
 class UserTokenAuthenticator : BearerAuthenticator {
     
     private func checkRecievedTokenAndGetUser(bearer: BearerAuthorization, for req: Request) throws->EventLoopPromise<Result<User, Error>> {
@@ -206,3 +210,4 @@ class UserTokenAuthenticator : BearerAuthenticator {
     }
     
 }
+*/

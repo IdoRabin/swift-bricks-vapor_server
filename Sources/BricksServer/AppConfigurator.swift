@@ -360,7 +360,7 @@ fileprivate class AppConfigurator {
         app.routes.caseInsensitive = true
         
         // Boot and make sure to Register app routes:
-        try AppServer.shared.routeMgr.bootRoutes(app)
+        // CHECK IF NEEDED: try AppServer.shared.routeMgr.bootRoutes(app)
     }
     
     // MARK: Debug / Mockup

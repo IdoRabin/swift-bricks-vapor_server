@@ -12,6 +12,7 @@ import FluentKit
 import Leaf
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("AppRoutingController")
 
@@ -43,11 +44,11 @@ class AppRoutingController : NSObject/* to allow override of base class funcs in
     // MARK: Static
     
     // MARK: AppRouteManager - Indirect access to AppServer.shared.routes
-    fileprivate static var appRoutes : AppRoutes {
-        return  AppServer.shared.routeMgr
+    static var appRoutes : MNRoutes {
+        return Vapor.Route.mnRouteManager
     }
     
-    fileprivate var appRoutes : AppRoutes {
+    var appRoutes : MNRoutes {
         return Self.appRoutes
     }
     
@@ -60,25 +61,25 @@ class AppRoutingController : NSObject/* to allow override of base class funcs in
         return _newRoutes.removing(objects: _prevRoutes).uniqueElements()
     }
     
-    var allAppRoutes : [AppRoute] {
-        return appRoutes.listAppRoutes(forPaths: self.allRoutePaths)
+    var allAppRoutes : [MNRoute] {
+        return appRoutes.listMNRoutes(forPaths: self.allRoutePaths)
     }
     
-    var secureAppRoutes : [AppRoute] {
+    var secureAppRoutes : [MNRoute] {
         return allAppRoutes.filter { route in
             route.isSecure
         }
     }
     
     /// Returns all the route paths that are NOT secured (route has no Rabac rules)
-    var unsecureAppRoutes : [AppRoute] {
+    var unsecureAppRoutes : [MNRoute] {
         return allAppRoutes.filter { route in
             !route.isSecure
         }
     }
     
     var allVaporRoutes : [Vapor.Route] {
-        return appRoutes.listAppRoutes(forPaths: self.allRoutePaths).compactMap { appRoute in
+        return appRoutes.listMNRoutes(forPaths: self.allRoutePaths).compactMap { appRoute in
             return appRoute.route
         }
     }

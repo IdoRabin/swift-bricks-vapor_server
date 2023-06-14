@@ -9,6 +9,7 @@
 import Vapor
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("RoutesBuilderEx")
 
@@ -17,12 +18,12 @@ fileprivate let R_DESCRIPTION_KEY = RouteInfoCodingKeys.ri_desc.rawValue
 
 extension Vapor.RoutesBuilder {
     
-    static var appRoutes : AppRoutes {
-        return Vapor.Route.appRoutes
+    static var appRoutes : MNRoutes {
+        return Vapor.Route.mnRouteManager
     }
     
-    var appRoutes : AppRoutes {
-        return Vapor.Route.appRoutes
+    var appRoutes : MNRoutes {
+        return Self.appRoutes
     }
     
     // MARK: Generalized calls for AsyncResponseEncodable

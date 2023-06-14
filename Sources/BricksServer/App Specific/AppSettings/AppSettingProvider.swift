@@ -8,11 +8,11 @@
 import Foundation
 
 protocol AppSettingProvider {
-    func noteChange(_ change:String, newValue:Any)
-    func blockChanges(block:(_ settings : any AppSettingProvider)->Void)
-    func resetToDefaults()
-    @discardableResult func saveIfNeeded()->Bool
-    @discardableResult func save()->Bool
+    func noteChange(_ change:String, newValue:Any) async
+    func blockChanges(block:(_ settings : any AppSettingProvider)->Void) async
+    func resetToDefaults() async
+    @discardableResult func saveIfNeeded() async  ->Bool
+    @discardableResult func save() async  ->Bool
     
     var other : [String:Any] { get }
     var wasChanged : Bool { get }

@@ -16,7 +16,7 @@ import Vapor
 //static let FORBIDDEN_USER_NAME_CONTAINS     = ["username", "%20", "http", ".com", ".co.", ".org", ".us", ".uk", ".cn", ".ru", "hitler"] // string component ("word") should not contain this specifically for a name
 //
 //
-
+/*
 extension User : AppValidatable {
     
     // Length limits to validate fields:
@@ -83,3 +83,4 @@ extension User  {
         return nil
     }
 }
+*/

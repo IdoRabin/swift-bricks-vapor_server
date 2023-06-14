@@ -9,7 +9,7 @@ import Foundation
 
 
 // TODO: reimplement
-extension User {
+//extension User {
 //    @Field(key: CodingKeys.roles.fieldKey)
 //    var roleIds : [RoleUID] {
 //        didSet {
@@ -58,4 +58,4 @@ extension User {
 //
 //        return fethcedRoles
 //    }
-}
+//}

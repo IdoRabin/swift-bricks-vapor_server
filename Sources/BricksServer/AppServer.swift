@@ -14,6 +14,7 @@ import NIO
 
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("App")
 
@@ -62,7 +63,7 @@ class AppServer : LifecycleHandler {
     weak var vaporApplication : Application? = nil
     weak var permissions : AppPermissionMiddleware? = nil
     // UNCOMMENT var users : UserMgr = UserMgr()
-    var routeMgr : AppRoutes
+    var routeMgr : MNRoutes
     
     // MARK: flags and names members
     var dbName : String = AppServer.INITIAL_DB_NAME
@@ -109,7 +110,7 @@ class AppServer : LifecycleHandler {
     private init() {
         Self.isInitializing = true
         isBooting = true
-        routeMgr = AppRoutes()
+        routeMgr = MNRoutes()
         // Rabac.shared.setupIfNeeded()
         Self.isInitializing = false
     }

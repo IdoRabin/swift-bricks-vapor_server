@@ -16,7 +16,7 @@ import MNUtils
 fileprivate let dlog : DSLogger? = DLog.forClass("AppPermissionMiddleware")
 
 enum PermissionSubject : JSONSerializable, Hashable {
-    case users([User])
+    case users([MNUser])
     case files([String])
     case routes([String])
     case webpages([String])
@@ -74,12 +74,13 @@ extension AppPermission {
 //}
 
 protocol PermissionGiver {
-    
+    /*
     func isAllowed(for selfUser:User?,
                    to action:Any,
                    on subject:PermissionSubject?,
                    during req:Request?,
                    params:[String:Any]?)->AppPermission
+     */
 }
 
 // NOTE: See also implementation in : AppPermissionMiddleware + Routes
@@ -170,7 +171,7 @@ final class AppPermissionMiddleware: Middleware, LifecycleBootableHandler {
         // 401 Unauthorized - use when access token is missing or wrong
         // 403 Forbidden - use when access token exists and is valid, but the permissions / role does not allow this operation
         dlog?.info(".respond(to:req..).. START \(request.url.path)")
-        _ = request.routeContext ?? AppRouteContext.setupRouteContext(for: request)
+        _ = request.routeContext /*?? AppRouteContext.setupRouteContext(for: request)*/
         // Error pages: do not need checking ?
         if request.url.path.asNormalizedPathOnly() == Self.errorWebpagePaths.first ?? "" {
             return next.respond(to: request)
@@ -222,7 +223,7 @@ final class AppPermissionMiddleware: Middleware, LifecycleBootableHandler {
 }
 
 extension AppPermissionMiddleware : PermissionGiver {
-    
+    /*
     func isAllowed(for selfUser: User?,
                    to action: Any,
                    on subject: PermissionSubject?,
@@ -251,5 +252,5 @@ extension AppPermissionMiddleware : PermissionGiver {
         }
         return .allowed(permissionId)
     }
-    
+    */
 }

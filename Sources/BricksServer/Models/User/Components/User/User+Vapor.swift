@@ -15,7 +15,7 @@ import FluentPostgresDriver
 import DSLogger
 
 fileprivate let dlog : DSLogger? = DLog.forClass("User")
-
+/*
 // Extensions requiring no implementations
 extension User : Content {} // Convertible to / from content in an HTTP message.
 extension User : Authenticatable {}
@@ -49,5 +49,7 @@ extension User : ModelAuthenticatable {
         try Bcrypt.verify(password, created: self.passwordHash) // using BCrypt for passwords as defined in config
     }
 }
+ */
 
 #endif // #if VAPOR
+

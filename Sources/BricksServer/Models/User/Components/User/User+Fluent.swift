@@ -13,7 +13,7 @@ import Fluent
 import MNUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("User+Fluent")
-
+/*
 extension User : Model {
     // Fluent Schema protocol: space, alias, schema
     // https://www.postgresql.org/docs/current/sql-keywords-appendix.html
@@ -54,5 +54,6 @@ extension User : Migration {
         }
     }
 }
-
+ */
 #endif
+

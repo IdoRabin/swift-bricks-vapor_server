@@ -5,7 +5,7 @@ let package = Package(
     // 💧 A Vapor server-side Swift web f ramework.
     name: "bricks_server",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v13),
     ],
     dependencies: [
         // 3Rd party
@@ -18,6 +18,7 @@ let package = Package(
          // In-House pakcages
         .package(path: "../../xcode/DSLogger"),
         .package(path: "../../xcode/MNUtils/MNUtils"),
+        .package(path: "../../vapor/MNVaporUtils/"),
         // .package(path: "../../vapor/RRabac"),
     ],
     targets: [
@@ -34,6 +35,7 @@ let package = Package(
                 // In-House pakcages
                 .product(name: "DSLogger", package: "DSLogger"),
                 .product(name: "MNUtils", package: "MNUtils"),
+                .product(name: "MNVaporUtils", package: "MNVaporUtils"),
                 // .product(name: "RRabac", package: "RRabac"),
             ],
             swiftSettings: [

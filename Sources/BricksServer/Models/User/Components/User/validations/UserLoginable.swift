@@ -50,7 +50,7 @@ protocol UserLoginable : AppValidatable, JSONSerializable {
 }
 
 extension UserLoginable {
-    
+    /*
     static func validations(_ validations: inout AppValidations) {
         validations.add("username", as: String.self, is: .count(User.existingUsernameLengthLimits) && .characterSet(.usernameAllowedSet))
         validations.add("userDomain", as: String.self, is: .count(User.userDomainLengthLimits) && .characterSet(.userDomainAllowedSet))
@@ -101,5 +101,6 @@ extension UserLoginable {
     func loginParamsLenCheck(username usrL:Int, pwd pwdL:Int) -> AppError? {
         return Self.loginParamsLenCheck(username: usrL, pwd: pwdL)
     }
+     */
 }
 

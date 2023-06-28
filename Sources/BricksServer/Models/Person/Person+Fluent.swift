@@ -9,6 +9,7 @@ import Foundation
 import Fluent
 
 // MARK: Fluent
+/*
 extension Person : Model {
     // static var schema: String is auto implemented in FluentModelEx.swift
     // Fluent Schema protocol: space, alias, schema
@@ -39,3 +40,4 @@ extension Person : Migration {
         database.schema(Self.schema).delete()
     }
 }
+*/

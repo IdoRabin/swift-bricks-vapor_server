@@ -24,7 +24,7 @@ enum UsernameType : String, AppModelStrEnum, Codable {
     
     // NOTE: AppModelStrEnum MUST have string values = "my_string_value" for each string case.
     case unknown = "unknown"
-    case email  = "email"
+    case email  = "useremail"
     case domained = "domained"
     
     static var all : [UsernameType] = [
@@ -133,7 +133,7 @@ final class User : JSONSerializable, MNUIDable {
     static func determineUsernameType(_ username:String)->UsernameType {
         var result : UsernameType = .unknown
         if username.isValidEmail() {
-            result = .email
+            result = .useremail
         } else {
             result = .domained
         }

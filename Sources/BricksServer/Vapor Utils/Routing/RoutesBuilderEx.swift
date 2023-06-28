@@ -74,6 +74,8 @@ extension Vapor.RoutesBuilder {
 
         // Build for multiple methods:
         var lastRoute : Route!
+        // TODO:
+        /*
         for method in methods.uniqueElements() {
             // We create multiple routes for each http method type...
             let route = Route(
@@ -95,8 +97,9 @@ extension Vapor.RoutesBuilder {
             appRoutes.registerRouteIfNeeded(appRoute: appRoute)
             lastRoute = route
         }
+         */
 //
-        lastRoute.debugValidateAppRoute(context: ".on(methods:path:body:info:\(dict?.count.description ?? "<nil>"):use:)")
+        // TODO: lastRoute.debugValidateAppRoute(context: ".on(methods:path:body:info:\(dict?.count.description ?? "<nil>"):use:)")
         
         return lastRoute
     }
@@ -112,21 +115,22 @@ extension Vapor.RoutesBuilder {
         
         var result : [Route] = []
         
-        for method in methods {
-            let route = self.on(method) { req->Response in
-                dlog?.warning("TODO: Handle redirection [\(method)] in terms of context and routeInfo.. \(req)")
-                dlog?.raisePreconditionFailure("TODO: Handle redirection [\(method)] in terms of context and routeInfo.. \(req)")
-//                    .setting(dictionary: [
-//                        .ri_redirectedFrom: fromPath
-//                    ])
+        // TODO: 
+//        for method in methods {
+//            let route = self.on(method) { req->Response in
+//                dlog?.warning("TODO: Handle redirection [\(method)] in terms of context and routeInfo.. \(req)")
+//                dlog?.raisePreconditionFailure("TODO: Handle redirection [\(method)] in terms of context and routeInfo.. \(req)")
+////                    .setting(dictionary: [
+////                        .ri_redirectedFrom: fromPath
+////                    ])
+////
+//                return to(method, req)
+//            }
 //
-                return to(method, req)
-            }
-            
-            appRoutes.registerRouteIfNeeded(appRoute: route.appRoute)
-            route.debugValidateAppRoute(context: ".redirects(methods:to:)")
-            result.append(route)
-        }
+//            appRoutes.registerRouteIfNeeded(appRoute: route.appRoute)
+//            route.debugValidateAppRoute(context: ".redirects(methods:to:)")
+//            result.append(route)
+//        }
 
         return result
     }

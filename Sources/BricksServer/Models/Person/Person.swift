@@ -12,7 +12,7 @@ import MNUtils
 #if VAPOR
 import Vapor
 #endif
-
+/*
 final class Person : MNUIDable {
     
     enum CodingKeys : String {
@@ -138,3 +138,4 @@ extension Person : Equatable, Hashable {
         lhs.deletedAt == rhs.deletedAt
     }
 }
+*/

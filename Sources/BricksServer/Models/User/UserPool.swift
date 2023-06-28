@@ -20,7 +20,7 @@ protocol UserHTTPResponsable : Hashable ,Sendable {
 }
 
 protocol UserManager {
-    
+    /*
     // Vars
     var selfUser : User? { get set}
     
@@ -32,6 +32,7 @@ protocol UserManager {
     func getUser(byUsername username:String?)->AppResult<User>
     
     func update(users:[User])->AppResult<[UUID:any UserHTTPResponsable]>
+     */
 }
 
 class UserPool {

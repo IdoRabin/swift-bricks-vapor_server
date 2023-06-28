@@ -6,7 +6,7 @@
 //
 
 import Foundation
-
+/*
 enum PersonRank : String, Codable {
     
     case onboarding
@@ -23,3 +23,4 @@ enum PersonRank : String, Codable {
         ]
     }
 }
+*/

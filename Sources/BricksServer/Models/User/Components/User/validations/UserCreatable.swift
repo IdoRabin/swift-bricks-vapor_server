@@ -25,10 +25,10 @@ protocol UserCreatable : AppValidatable, JSONSerializable {
 extension UserCreatable {
     
     static func validations(_ validations: inout AppValidations) {
-        
-        validations.add("username", as: String.self, is: .count(User.newUsernameLengthLimits) && .characterSet(.usernameAllowedSet))
-        validations.add("userDomain", as: String.self, is: .count(User.userDomainLengthLimits) && .characterSet(.userDomainAllowedSet))
-        validations.add("newUserPwd", as: String.self, is: .count(User.newPwdLengthLimits))
+        /*
+        validations.add("username", as: String.self, is: .count(MNUser.newUsernameLengthLimits) && .characterSet(.usernameAllowedSet))
+        validations.add("userDomain", as: String.self, is: .count(MNUser.userDomainLengthLimits) && .characterSet(.userDomainAllowedSet))
+        validations.add("newUserPwd", as: String.self, is: .count(MNUser.newPwdLengthLimits))
         validations.add("newUsernameType", as: UsernameType.self, is: .init(validate: { data in
             AppValidationResult.by(
                 test: {
@@ -38,7 +38,7 @@ extension UserCreatable {
                 errorCode: .http_stt_badRequest,
                 errorReason: "UsernameType is unknown")
         }))
-        
+        */
     }
     
 }

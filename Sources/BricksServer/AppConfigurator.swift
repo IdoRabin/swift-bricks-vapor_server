@@ -88,8 +88,8 @@ fileprivate class AppConfigurator {
     fileprivate func allDBMigrations()->[Migration] {
         let result : [Migration] = [
             // Stats / Users / Roles / Pages controllers
-            Company(), Person(),
-            User(), AccessToken(), // AppRole(util:"Migration") // UNCOMMENT:
+            Company(),
+            // UNCOMMENT: Person(), User(), AccessToken(), AppRole(util:"Migration")
             
             // Project / Bricks models
             BrickBasicInfo(), Brick()] // Project controller
@@ -338,9 +338,12 @@ fileprivate class AppConfigurator {
         app.middleware.use(app.sessions.middleware)
         
         // Permissions / Rabac
+        // TODO:
+        /*
         let permissionsMiddleware = AppPermissionMiddleware.default(environment: app.environment)
         AppServer.shared.permissions = permissionsMiddleware
         app.middleware.use(permissionsMiddleware)
+         */
         
         // Uncomment to serve files from /Public folder
         // Also need to setup working directory in Edit Scheme -> Options -> Working Directory to app root path (where the pakage sits)
@@ -462,8 +465,8 @@ fileprivate class AppConfigurator {
             try configureDB(app)
             
             AppServer.shared.dbName = self.dbName
-            // unomment:  AppServer.shared.users.db = app.db
-            AppServer.shared.permissions?.db = app.db
+            // // TODO: uncomment:  AppServer.shared.users.db = app.db
+            // // TODO: AppServer.shared.permissions?.db = app.db
             
             // Configuation of Leaf must take place after app.autoMigrate().wait() (which is in the DB init inside configureDB)
             app.views.use(.leaf)

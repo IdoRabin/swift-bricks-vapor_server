@@ -66,8 +66,8 @@ class ReqStorageKeys {
     static let requestId = RequestIdStorageKey.self
     static let redirectedFrom = RedirectedFromStorageKey.self
     static let contextText = ContextTextStorageKey.self
-    static let appRouteContext = AppRouteContextStorageKey.self
-    static let appRouteHistory = AppRoutingHistoryStorageKey.self
+//    static let appRouteContext = AppRouteContextStorageKey.self
+//    static let appRouteHistory = AppRoutingHistoryStorageKey.self
     
     static let errorCode = ErrorCodeStorageKey.self
     static let errorReason = ErrorReasonStorageKey.self
@@ -90,8 +90,8 @@ class ReqStorageKeys {
         ReqStorageKeys.errorCode,
         ReqStorageKeys.errorReason,
         ReqStorageKeys.contextText,
-        ReqStorageKeys.appRouteContext,
-        ReqStorageKeys.appRouteHistory,
+//        ReqStorageKeys.appRouteContext,
+//        ReqStorageKeys.appRouteHistory,
         ReqStorageKeys.userTokenCreateIfExpired,
         ReqStorageKeys.userTokenMakeIfMissing,
     ]

@@ -103,12 +103,12 @@ class AppRoutingController : NSObject/* to allow override of base class funcs in
     
     /// Returns all the route paths that are secured (route has at least one Rabac rule)
     var secureRoutePaths : [String] {
-        return secureAppRoutes.fullPaths
+        return [] // TODO: secureAppRoutes.fullPaths
     }
     
     /// Returns all the route paths that are NOT secured (route has no Rabac rules)
     var unsecureRoutePaths : [String] {
-        return unsecureAppRoutes.fullPaths
+        return [] // TODO: unsecureAppRoutes.fullPaths
     }
     
     // MARK: Private
@@ -117,15 +117,17 @@ class AppRoutingController : NSObject/* to allow override of base class funcs in
     
     // MARK: AppRoutingControllable
     func willBoot(_ application: Application) {
-        self._prevRoutes = AppServer.shared.vaporApplication?.routes.all.map { route in
-            return route.path.fullPath
-        }.uniqueElements() ?? []
+        // TODO:
+//        self._prevRoutes = AppServer.shared.vaporApplication?.routes.all.map { route in
+//            return route.path.fullPath
+//        }.uniqueElements() ?? []
     }
     
     func didBoot(_ application: Application) {
-        self._newRoutes = AppServer.shared.vaporApplication?.routes.all.map { route in
-            return route.path.fullPath
-        }.uniqueElements() ?? []
+        // TODO:
+//        self._newRoutes = AppServer.shared.vaporApplication?.routes.all.map { route in
+//            return route.path.fullPath
+//        }.uniqueElements() ?? []
     }
     
     // MARK: RouteCollection

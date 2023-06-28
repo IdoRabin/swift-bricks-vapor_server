@@ -14,7 +14,7 @@ import DSLogger
 import MNUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("AppPermissionMiddleware")
-
+/*
 enum PermissionSubject : JSONSerializable, Hashable {
     case users([MNUser])
     case files([String])
@@ -254,3 +254,4 @@ extension AppPermissionMiddleware : PermissionGiver {
     }
     */
 }
+*/

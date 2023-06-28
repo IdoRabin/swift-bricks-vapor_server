@@ -17,8 +17,8 @@ let package = Package(
         
          // In-House pakcages
         .package(path: "../../xcode/DSLogger"),
-        .package(path: "../../xcode/MNUtils/MNUtils"),
-        .package(path: "../../vapor/MNVaporUtils/"),
+        .package(path: "../../xcode/MNUtils/MNUtils"), // from: "0.0.2"
+        .package(path: "../../vapor/MNVaporUtils/"), // from: "0.0.2"
         // .package(path: "../../vapor/RRabac"),
     ],
     targets: [

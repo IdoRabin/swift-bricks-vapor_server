@@ -61,9 +61,19 @@ class AppServer : LifecycleHandler {
     // MARK: members
     weak var settings = AppSettings.shared
     weak var vaporApplication : Application? = nil
-    weak var permissions : AppPermissionMiddleware? = nil
+    // weak var permissions : AppPermissionMiddleware? = nil
     // UNCOMMENT var users : UserMgr = UserMgr()
-    var routeMgr : MNRoutes
+    private var _routeMgr : MNRoutes? = nil
+    public var routeMgr : MNRoutes {
+        get {
+            return _routeMgr!
+        }
+        set {
+            if self._routeMgr !== newValue {
+                self._routeMgr = newValue
+            }
+        }
+    }
     
     // MARK: flags and names members
     var dbName : String = AppServer.INITIAL_DB_NAME
@@ -75,7 +85,7 @@ class AppServer : LifecycleHandler {
     // READ-ONLY! increment should be made to settings?.stats.launchCount
     var launchCount : Int {
         get {
-            return self.settings?.stats.launchCount ?? 1
+            return 999999 // TODO: self.settings?.stats.launchCount ?? 1
         }
     }
     
@@ -110,7 +120,7 @@ class AppServer : LifecycleHandler {
     private init() {
         Self.isInitializing = true
         isBooting = true
-        routeMgr = MNRoutes()
+//        routeMgr = MNRoutes()
         // Rabac.shared.setupIfNeeded()
         Self.isInitializing = false
     }
@@ -120,6 +130,7 @@ class AppServer : LifecycleHandler {
     }
     
     // MARK: Public
+    /*
     public func manualShutdown(user:User) {
         // user.
 //        guard UserMgr.shared.isAllowed(for: user, to: .allActions, on: nil, during: nil).isSuccess else {
@@ -144,27 +155,31 @@ class AppServer : LifecycleHandler {
             dlog?.warning("manualShutdown .onShutdown wait failed with error: \(error.description)")
         }
     }
+    */
     
     // MARK: LifecycleHandler
     func willBoot(_ application: Vapor.Application) throws {
-        try self.permissions?.willBoot(application)
+        // TODO: try self.permissions?.willBoot(application)
         dlog?.info("> Vapor app will Boot Nr.# \(self.launchCountHexString)")
     }
     
     func didBoot(_ application: Vapor.Application) throws {
-        
+        // TODO:
+        /*
         // Wait for isDBLoaded to be true:
         if let perm = AppServer.shared.permissions {
             // Boot - register perissions for all routes.
             try perm.boot(application) // globsl function for registering permissions
         } else {
             dlog?.note("didBoot() AppPermissionMiddleware was not set in time for AppServer to call its boot!")
-        }
+        }ÅÅÅÅ
+        */
         
         // Change stats on launch
         settings?.blockChanges(block: { settings in
-            settings.stats.launchCount = self.launchCount
-            settings.stats.lastLaunchDate = Date();
+            // TODO:
+//            settings.stats.launchCount = self.launchCount
+//            settings.stats.lastLaunchDate = Date();
         })
         
         isBooting = false
@@ -173,9 +188,12 @@ class AppServer : LifecycleHandler {
          
         // NOTE: Call secureRoutesAfterBoot only after changing the isBooting flag to false:
         self.routeMgr.secureRoutesAfterBoot(application)
-
+        
+        // TODO:
+        /*
         //        Rabac.shared.didBoot()
         try self.permissions?.didBoot(application)
+         */
     }
     
     func shutdown(_ application: Vapor.Application) {

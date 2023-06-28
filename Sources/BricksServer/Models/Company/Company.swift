@@ -40,8 +40,9 @@ final class Company : MNUIDable {
     var tags : [String]
     
     // Example of a children relation.
-    @Children(for: \.$company)
-    var personnel: [Person]
+    // TODO:
+    //@Children(for: \.$company)
+    //var personnel: [Person]
 }
 
 extension  Company : Codable & Hashable {
@@ -49,8 +50,8 @@ extension  Company : Codable & Hashable {
     static func ==(lhs:Company, rhs:Company)->Bool {
         return lhs.mnUID == rhs.mnUID &&
                lhs.name == rhs.name &&
-               lhs.tags == rhs.tags &&
-               lhs.personnel == rhs.personnel
+               lhs.tags == rhs.tags
+        // TODO: ?? && lhs.personnel == rhs.personnel
     }
     
     // MARK: Hahsable
@@ -58,6 +59,6 @@ extension  Company : Codable & Hashable {
         hasher.combine(self.id)
         hasher.combine(self.name)
         hasher.combine(self.tags)
-        hasher.combine(self.personnel)
+        // TODO: ?? hasher.combine(self.personnel)
     }
 }

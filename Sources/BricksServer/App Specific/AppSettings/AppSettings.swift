@@ -16,83 +16,16 @@ fileprivate let dlog : DSLogger? = DLog.forClass("AppSettings")?.setting(verbose
 
 // A singleton for all app settingsåå, saves and loads from a json file the last saved settings.
 // "Other" are all settings properties that are distributed around the app as properties of other classes. They åare still connected and saved into this settings file, under the "other" dictionary.
-final actor AppSettings : AppSettingProvider, JSONFileSerializable {
+final class AppSettings : AppSettingProvider, JSONFileSerializable {
+    
+    
     #if VAPOR
     static let FILENAME = AppConstants.BSERVER_APP_SETTINGS_FILENAME
     #else
     static let FILENAME = AppConstants.CLIENT_SETTINGS_FILENAME
     #endif
     
-    // MARK: Const
-    // MARK: Static
-    static var _isLoaded : Bool = false
-    static var _initingShared : Bool = false
-    static var _defaultResponWithReqId = Dictionary<BuildType, Bool>(uniqueKeysWithValues:[(BuildType.all, true)])
-    static var _defaultResponWithSelfUserId = Dictionary<BuildType, Bool>(uniqueKeysWithValues:[(BuildType.all, true)])
-    static var _defaultParamKeysToNeverRedirect : [String] = ["password", "pwd", "email", "phoneNr", "phoneNumber" ,"phone", "token",
-                                                         "accessToken", "user"]
-    
-    // MARK: Private Properties / members
-    @SkipEncode private var _changes : [String] = []
-    @SkipEncode private var _isLoading : Bool = false
-    @SkipEncode private var _isBlockChanges : Bool = false
-    
-    // MARK: Public Properties / members
-    // var other: [String : Any]
-    
-    var wasChanged : Bool {
-        return _changes.count > 0
-    }
-    
-    static var isLoaded : Bool {
-        return Self._isLoaded
-    }
-    
-    var isLoaded : Bool {
-        return Self.isLoaded && !_isLoading
-    }
-    
-    // MARK: Lifecycle
-    private static var _shared : AppSettings? = nil
-    public static func shared(_ block : (_ appSettings : AppSettings)->Void) {
-        
-    }
-    
-    // MARK: Private
-    
-    // MARK: Public
-    
-    // MARK: AppSettingProvider
-    func noteChange(_ change: String, newValue: Any) {
-            
-    }
-    
-    func blockChanges(block: (AppSettingProvider) -> Void) {
-        
-    }
-    
-    func resetToDefaults() {
-        
-    }
-    
-    func saveIfNeeded() -> Bool {
-        
-    }
-    
-    func save() -> Bool {
-        
-    }
-    
-    static func loadFromJSON<T>(_ fileurl: URL) -> Result<T, Error> where T : MNUtils.JSONFileSerializable {
-        
-    }
-    
-}
-
-/*
-final class AppSettings : AppSettingProvider, JSONFileSerializable {
-    
-    
+    // MARK: Types
     struct AppSettingsGlobal : Codable {
         @AppSettable(name:"global.newUsernameAllowedTypes", default:UsernameType.allActive) var newUsernameAllowedTypes : [UsernameType]
         @AppSettable(name:"global.existingAllowedTypes", default:UsernameType.allActive) var existingUsernameAllowedTypes : [UsernameType]
@@ -133,6 +66,92 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
         // All default values should be production values.
         @AppSettable(name:"debug.isSimulateNoNetwork", default:false) var isSimulateNoNetwork : Bool
     }
+    
+    // MARK: Const
+    // MARK: Static
+    static var _isLoaded : Bool = false
+    static var _initingShared : Bool = false
+    static var _defaultResponWithReqId = Dictionary<BuildType, Bool>(uniqueKeysWithValues:[(BuildType.all, true)])
+    static var _defaultResponWithSelfUserId = Dictionary<BuildType, Bool>(uniqueKeysWithValues:[(BuildType.all, true)])
+    static var _defaultParamKeysToNeverRedirect : [String] = ["password", "pwd", "email", "phoneNr", "phoneNumber" ,"phone", "token",
+                                                         "accessToken", "user"]
+    
+    // MARK: Private Properties / members
+    @SkipEncode private var _changes : [String] = []
+    @SkipEncode private var _isLoading : Bool = false
+    @SkipEncode private var _isBlockChanges : Bool = false
+    
+    // MARK: Public Properties / members
+    var other: [String : Any] = [:]
+    
+    var wasChanged : Bool {
+//        return _changes.count > 0
+        return false
+    }
+    
+    static var isLoaded : Bool {
+//        return Self._isLoaded
+        return false
+    }
+    
+    var isLoaded : Bool {
+        return Self.isLoaded // && !_isLoading
+    }
+    
+    // MARK: Lifecycle
+    @SkipEncode private static var _shared : AppSettings? = nil
+    public static func shared(_ block : (_ appSettings : AppSettings)->Void) {
+//        
+    }
+    
+    // MARK: Singleton
+    public static let shared = AppSettings()
+    private init(){
+        
+    }
+    
+    // MARK: Public
+    
+    // MARK: Codable
+    // MARK: Codable
+    func encode(to encoder: Encoder) throws {
+        
+    }
+    
+    init(from decoder: Decoder) throws {
+        
+    }
+    
+    // MARK: AppSettingProvider
+    func noteChange(_ change: String, newValue: Any) {
+            
+    }
+    
+    func blockChanges(block: (AppSettings) -> Void) {
+        
+    }
+    
+    func resetToDefaults() {
+        
+    }
+    
+    @discardableResult
+    func saveIfNeeded() -> Bool {
+        return false
+    }
+    
+    @discardableResult
+    func save() -> Bool {
+        return false
+    }
+    
+}
+
+/*
+final class AppSettings : AppSettingProvider, JSONFileSerializable {
+    
+    
+    
     
     private enum CodingKeys: String, CodingKey {
         case global = "global"

@@ -9,7 +9,7 @@ import Foundation
 
 #if VAPOR
 
-
+/*
 import Vapor
 import Fluent
 import DSLogger
@@ -61,5 +61,6 @@ extension Person: Validatable {
         // validations.add("username", as: String.self, is: !.empty && .count(3...) && .alphanumeric)
     }
 }
+*/
 
 #endif // #if VAPOR

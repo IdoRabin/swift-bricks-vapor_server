@@ -32,7 +32,7 @@ struct AppSettable<T:Equatable & Codable> : Codable {
         
     }
     
-    enum CodingKeys : String, CodingKey {
+    enum CodingKeys : String, CodingKey, CaseIterable {
         case name  = "name"
         case value = "value"
     }

@@ -19,7 +19,7 @@ let package = Package(
         .package(path: "../../xcode/DSLogger"),
         .package(path: "../../xcode/MNUtils/MNUtils"), // from: "0.0.2"
         .package(path: "../../vapor/MNVaporUtils/"), // from: "0.0.2"
-        // .package(path: "../../vapor/RRabac"),
+        .package(path: "../../vapor/RRabac"), // from: "0.0.1"
     ],
     targets: [
         .executableTarget(
@@ -36,7 +36,7 @@ let package = Package(
                 .product(name: "DSLogger", package: "DSLogger"),
                 .product(name: "MNUtils", package: "MNUtils"),
                 .product(name: "MNVaporUtils", package: "MNVaporUtils"),
-                // .product(name: "RRabac", package: "RRabac"),
+                .product(name: "RRabac", package: "RRabac"),
             ],
             swiftSettings: [
                 // Enables better optimizations when building in Release

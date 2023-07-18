@@ -14,7 +14,9 @@ fileprivate let dlog : DSLogger? = DLog.forClass("VaporApplicationEx")
 
 typealias MigrationResult = AppResult<[String]>
 
-fileprivate let MIN_REQUIRED_TABLE_NAMES = ["brick", "person", "buser", "access_token", "app_role", "brick_basic_info", "company"]
+fileprivate let MIN_REQUIRED_TABLE_NAMES = ["person_rank", "person", "company", // basic Data models
+                                            "buser", "access_token", "app_role", // Auth
+                                            "brick", "brick_basic_info"] // Bricks project
 
 
 extension Vapor.Application /* Bricks */{
@@ -28,6 +30,7 @@ extension Vapor.Application /* Bricks */{
             
             // Check resulting DB table names:
             if !names.contains(allOf: MIN_REQUIRED_TABLE_NAMES, isCaseSensitive: false) {
+                dlog?.warning("validateMigration() Found table names: \(MIN_REQUIRED_TABLE_NAMES.intersection(with: names).descriptionsJoined)")
                 dlog?.warning("validateMigration() Missing table names: \(MIN_REQUIRED_TABLE_NAMES.removing(objects: names).descriptionsJoined)")
                 throw AppError(code:.db_failed_init, reason: "Some required table names are missing")
             } else {
@@ -43,4 +46,6 @@ extension Vapor.Application /* Bricks */{
         let evloop = self.eventLoopGroup.next()
         return result.asEventLoppFuture(for: evloop)
     }
+    
+    
 }

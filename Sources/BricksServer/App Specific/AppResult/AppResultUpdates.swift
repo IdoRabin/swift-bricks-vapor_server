@@ -24,7 +24,7 @@ extension AppResultUpdated {
     }
 }
 
-//public enum AppResultUpdates<Value:Any> : CustomStringConvertible {
+//public enum AppResultUpdates<Value:Any> : CustomStringConvertible, CaseIterable {
 //    case noChanges(Value? = nil)
 //    case newData(Value? = nil)
 //

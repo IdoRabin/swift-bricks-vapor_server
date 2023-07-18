@@ -9,6 +9,7 @@ import Foundation
 import Fluent
 import DSLogger
 import MNUtils
+import PostgresNIO
 
 fileprivate let dlog : DSLogger? = DLog.forClass("FluentDBEventsListener")?.setting(verbose: false)
 
@@ -32,7 +33,11 @@ extension AppServer : FluentDBEventsListener {
     }
     func dbDidMigrate(db:Database, error:Error?) {
         if let error = error {
-            dlog?.warning("FluentDBEventsListener --> dbDidMigrate for \(dbName) failed with error:\(error)")
+            if let error = error as? PSQLError {
+                dlog?.warning("FluentDBEventsListener --> dbDidMigrate for \(dbName) failed with PSQLError:\(error.fullDescription)")
+            } else {
+                dlog?.warning("FluentDBEventsListener --> dbDidMigrate for \(dbName) failed with error:\(error)")
+            }
         } else {
             dlog?.verbose(log: .success, "FluentDBEventsListener --> dbDidMigrate \(dbName)")
         }

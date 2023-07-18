@@ -7,8 +7,14 @@
 import Foundation
 import MNUtils
 
-typealias AppResult<Success:Any> = Result<Success, AppError>
-typealias AppResultBlock<Success:Any> = (AppResult<Success>)->Void
+typealias AppResult<Success:Any> = MNResult<Success>
+typealias AppResultBlock<Success:Any> = MNResultBlock<Success>
+
+public extension AppResult {
+    var appErrorValue : MNError? {
+        return self.mnErrorValue
+    }
+}
 
 func AppResultOrErr<Success:Any>(_ result:Success?, error:AppError)->AppResult<Success> {
     if let result = result {
@@ -20,13 +26,16 @@ func AppResultOrErr<Success:Any>(_ result:Success?, error:AppError)->AppResult<S
 
 extension Result {
     
-    static func failure<Success:Any>(fromError error:Error)->AppResult<Success> {
-        if let apperror = error as? AppError {
-            return AppResult.failure(apperror)
-        } else {
-            return AppResult.failure(AppError(error: error))
-        }
+    static func failure<Success:Any>(fromError error: any Error)->AppResult<Success> {
+        var result : AppResult<Success>
         
+        if let appError = error as? AppError {
+            result = .failure(appError)
+        } else {
+            let appError = AppError(nserror: error as NSError)
+            result = .failure(appError)
+        }
+        return result
     }
     
     static func failure<Success:Any>(fromAppError appError:AppError)->AppResult<Success> {
@@ -34,18 +43,19 @@ extension Result {
     }
     
     static func failure<Success:Any>(code appErrorCode:AppErrorCode, reason:String? = nil)->AppResult<Success> {
-        return AppResult.failure(AppError(code:appErrorCode, reason: reason))
+        return AppResult<Success>.failure(fromAppError:AppError(code:appErrorCode, reason:reason))
     }
     
     static func failure<Success:Any>(code appErrorCode:AppErrorCode, reasons:[String]? = nil)->AppResult<Success> {
-        return AppResult.failure(AppError(code:appErrorCode, reasons: reasons))
+        
+        return AppResult<Success>.failure(fromAppError:AppError(code:appErrorCode, reasons:reasons))
     }
     
     static func fromError<Success:Any>(_ error:Error?, orSuccess:Success)->AppResult<Success> {
         if let appError = error as? AppError {
             return Self.fromAppError(appError, orSuccess: orSuccess)
-        } else if let err = error {
-            return Self.fromAppError(AppError(error: err), orSuccess: orSuccess)
+        } else if let err = error as? NSError {
+            return Self.fromAppError(AppError(nserror: err), orSuccess: orSuccess)
         } else {
             return .success(orSuccess)
         }

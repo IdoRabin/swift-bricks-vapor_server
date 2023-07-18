@@ -8,6 +8,8 @@ import AsyncHTTPClient
 
 import DSLogger
 import MNUtils
+import MNVaporUtils
+import RRabac
 
 // Global vars:
 // fileprivate let debugMasterUser : User? = nil
@@ -18,12 +20,13 @@ public func configure(_ app: /* Vapor. */ Application) async throws {
     let _ /* configurator */  = try AppConfigurator(app)
 }
 
-fileprivate class AppConfigurator {
+class AppConfigurator {
+    fileprivate static let INITIAL_DB_NAME = "?"
     
     // MARK: Private / filprivate methods that break down the configure process
     var debugUserAdded : Bool = false
     var debugUserBeingAdded : Bool = false
-    var dbName : String = "?"
+    var dbName : String = INITIAL_DB_NAME
     
     // MARK: Class lifecycle
     init() {
@@ -32,7 +35,16 @@ fileprivate class AppConfigurator {
     }
     
     deinit {
-        dlog?.info("DEINIT [\(dbName)]-")
+        dlog?.verbose(log:.info, "DEINIT configurator. DB: [\(dbName)]")
+    }
+    
+    var dbID : DatabaseID {
+        guard self.dbName != Self.INITIAL_DB_NAME else {
+            let msg = "dbID cannor be used before dbName is determined!"
+            dlog?.warning(msg)
+            preconditionFailure(msg)
+        }
+        return DatabaseID(string: self.dbName)
     }
     
     // MARK: DB configuration
@@ -79,45 +91,95 @@ fileprivate class AppConfigurator {
             switch result {
             case .success(let succ):
                 dlog?.success("createDBIfMissing SUCCESS: \(succ)")
-            case .failure(let failure):
-                dlog?.raisePreconditionFailure("createDBIfMissing FAILED: \(failure)\n create DB manually: \"\(self.dbName)\"")
+            case .failure(let failure as NSError):
+                dlog?.raisePreconditionFailure("createDBIfMissing FAILED: \(failure.description)\n create DB manually: \"\(self.dbName)\"")
             }
         })
     }
     
-    fileprivate func allDBMigrations()->[Migration] {
-        let result : [Migration] = [
-            // Stats / Users / Roles / Pages controllers
-            Company(),
-            // UNCOMMENT: Person(), User(), AccessToken(), AppRole(util:"Migration")
-            
+    fileprivate func allRRabacMigrations( app: Application)->[Migration] {
+        guard let rrabac = app.middleware(ofType: RRabacMiddleware.self) else {
+            // throw MNError(.misc_security, )
+            dlog?.raisePreconditionFailure("allRRabacMigrations failed finding RRabacMiddleware!")
+            return []
+        }
+        
+        // Find migrations from RRabac:
+        return rrabac.allRRabacMigrations()
+    }
+    
+    fileprivate func allDBMigrations( app: Application)->[Migration] {
+        var result : [Migration] = [
             // Project / Bricks models
-            BrickBasicInfo(), Brick()] // Project controller
+             BrickBasicInfo(),
+            Brick()
+        ] // Project controller
+        
+        // RRabac
+        result.append(contentsOf: self.allRRabacMigrations(app: app))
+        
+        // MNVaporUtils
+        result.append(contentsOf: MNUtils.allMNVaporUtilsMigrations())
+        
         return result
     }
 
-    fileprivate func migratreDBInstance(_ app: Application, context:String) async throws {
+    fileprivate func migrateDBInstance(_ app: Application, context:String) async throws {
         AppServer.shared.dbWillMigrate(db: app.db)
         
-        let tablesInstances : [Migration] = allDBMigrations()
-        
-        // MIGARTIONS:
-        app.migrations.add(tablesInstances, to: .psql)
-        
-        // Migration!
-        try await app.autoMigrate().get()
-        
-        // Will list table names after migrations:
-        let migrationResult = try await app.validateMigration().get()
-        dlog?.verbose(log:.info, "        📒 migratreDBInstance did validateMigration: \(migrationResult.description)")
-        if migrationResult.isFailed, let err = migrationResult.errorValue {
-            throw err
+        let migrations : [Migration] = allDBMigrations(app:app)
+        guard migrations.count > 0 else {
+            dlog?.verbose(log:.info, "        📒 migrateDBInstance autoMigrate skipped: 0 tables to migrate from allDBMigrations!")
+            return
         }
         
-        // Notify
-        AppServer.shared.dbDidMigrate(db: app.db, error: migrationResult.errorValue)
+        // MIGARTIONS:
+        do {
+            let dbId = DatabaseID(string: dbName)
+            app.migrations.add(migrations, to:dbId)
+            
+            
+            // Migration!
+            dlog?.verbose(log:.info, "        📒 migrateDBInstance autoMigrate START\ntables: \(migrations.shortNames.descriptionJoined)")
+            try await app.autoMigrate().get()
+            dlog?.verbose(log:.info, "        📒 migrateDBInstance autoMigrate END")
+            
+            /* TODO: uncomment
+            // Will list table names after migrations:
+            let migrationResult = try await app.validateMigration().get()
+            dlog?.verbose(log:.info, "        📒 migrateDBInstance did validateMigration: \(migrationResult.description)")
+            
+            if migrationResult.isFailed, let err = migrationResult.errorValue {
+                throw err
+            }
+            
+             // Notify
+             AppServer.shared.dbDidMigrate(db: app.db, error: migrationResult.errorValue)
+             */
+            
+            // Notify
+            AppServer.shared.dbDidMigrate(db: app.db, error: nil)
+        } catch let error {
+            if let psqlErr = error as? PSQLError {
+                dlog?.verbose(log:.warning, "        📒 migrateDBInstance autoMigrate FAILED with psqlErr: \(psqlErr.fullDescription)")
+                // psqlErr.backing.
+                if let underlying = psqlErr.underlying as? PSQLError{
+                    dlog?.verbose(log:.warning, "        📒 migrateDBInstance autoMigrate FAILED with underlying: \(underlying.fullDescription)")
+                }
+                // See configurator migration for memory session records..
+//                if migration.name.contains("unknown context at") {
+//                    self.database.logger.critical("The migration at \(migration.name) is in a private context. Either explicitly give it a name by adding the `var name: String` property or make the migration `internal` or `public` instead of `private`.")
+//                    fatalError("Private migrations not allowed")
+//                }
+            } else {
+                dlog?.verbose(log:.warning, "        📒 migrateDBInstance autoMigrate FAILED with error: \(error.description)")
+            }
+            
+            AppServer.shared.dbDidMigrate(db: app.db, error: error)
+            
+            throw error
+        }
     }
-    
     
     /// TLS configutration for production SSL requirement
     /// - Returns:a TLSConfiguration instance, using some certificates.
@@ -156,7 +218,7 @@ fileprivate class AppConfigurator {
                 password: Environment.get("DATABASE_PASSWORD") ?? "vapor",
                 database: Environment.get("DATABASE_NAME") ?? dbName,
                 tls: .prefer(try .init(configuration: tls))) // Used when starting out: .init(configuration: .clientDefault)
-        ), as: .psql, isDefault:true)
+        ), as: self.dbID /* DATABASE ID! */, isDefault:true)
         
         app.logger.info("migrateDB setting DB named: [\(dbName)] iana port: \(SQLPostgresConfiguration.ianaPortNumber)") // iana == 5432
         
@@ -185,7 +247,7 @@ fileprivate class AppConfigurator {
         
         // Migrate if needed
         if isShouldMigrate {
-            try await self.migratreDBInstance(app, context: dbMigrateContext)
+            try await self.migrateDBInstance(app, context: dbMigrateContext)
         } else {
             AppServer.shared.dbDidMigrate(db: app.db, error: AppError(code:.db_skipped_migration, reason: "DB migration deferred for this run [\(dbMigrateContext)]"))
         }
@@ -200,20 +262,6 @@ fileprivate class AppConfigurator {
         }.wait()
         
         return result
-        
-        // --------------------
-//        } catch let error {
-//            dlog?.warning("📒 configureDB failed: \(error.description)")
-//            let err = AppError(code: .db_failed_init, reasons: ["configureDB END failed"], underlyingError: error)
-//            result = evloop.makeFailedFuture(err)
-//        }
-        
-            
-            
-            // --------------------
-//            var result = AppResult<String>.failure(code: .db_failed_init, reason: "unknown reason")
-
-//            return result
     }
     
     private func configureDB(_ app: /* Vapor. */ Application) throws {
@@ -223,7 +271,7 @@ fileprivate class AppConfigurator {
         // JIC determine name:
         determineDBNameIfNeeded(app)
         
-        dlog?.verbose(log: .info, "📒 configureDB START \(self.dbName)")
+        dlog?.verbose(log: .info, "📒 configureDB START [\(self.dbName)]")
         let lock = MNThreadWaitLock()
         Task {[self] in
             AppServer.shared.dbName = self.dbName + " (Loading)"
@@ -234,12 +282,12 @@ fileprivate class AppConfigurator {
                 // Debug add / change DB info on init:
                 try await self.configureDebugAddUserIfNeeded(app)
                  
-                dlog?.verbose(log: .success, "    📒 configureDBInstance success \(self.dbName)")
+                dlog?.verbose(log: .success, "    📒 configureDB success \(self.dbName)")
                 
                 // result = evloop.makeCompletedFuture(.success(Void()))
-            } catch let error {
+            } catch let error as NSError {
                 // result = .failure(fromAppError: AppError(code: .db_failed_init, reasons: ["db configuration failed"], underlyingError: error))
-                dlog?.warning("    📒 configureDBInstance failed: [\(self.dbName)] error: \(error.description)")
+                dlog?.warning("    📒 configureDB failed: [\(self.dbName)] error: \(error.description)")
                 throw error
             }
             lock.signal()
@@ -257,12 +305,6 @@ fileprivate class AppConfigurator {
         return "\(dbName).\(Bundle.main.fullVersion)"
     }
     
-    // Creates the `cookies to follow the user along a single session:
-    fileprivate func sessionCookieFactory(_ sessionID:SessionID)->HTTPCookies.Value {
-        // note: see also ...configuration.cookieName ..
-        return .init(string: sessionID.string, isSecure: true)
-    }
-    
     private func configureServer(_ app: /* Vapor. */ Application) throws {
         globalVaporApplication = app
         AppServer.shared.vaporApplication = app
@@ -270,8 +312,16 @@ fileprivate class AppConfigurator {
         // Set AppServer as an observer of app LifecycleHandler protocol:
         app.lifecycle.use(AppServer.shared)
         
-        //let encoder = JSONServerEncoder()
-        //ContentConfiguration.global.use(encoder: encoder, for: .json)
+        // Content encoding:
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.dateEncodingStrategy = .iso8601
+        ContentConfiguration.global.use(encoder: encoder, for: .json)
+            
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .iso8601
+        ContentConfiguration.global.use(decoder: decoder, for: .json)
         
         // ================= CONFIGURE SERVER ========================
         // Hostname.. port..
@@ -291,66 +341,14 @@ fileprivate class AppConfigurator {
         // Server name:
         // This will be the "Server" header on outgoing HTTP responses
          app.http.server.configuration.serverName = AppConstants.APP_NAME + "; v" + Bundle.main.fullVersion + "; vapor 4.0;"
-        
+
         // = = = = = = Middlewares Config = = = = = = = = = = = = = = = = =
+        self.configRateLimitMiddleware()
+        self.configAppErrorMiddleware()
+        self.configRRabacMiddleware()
+        self.configFileMiddleware() // Uncomment to serve files from /Public folder
         
-        // TODO: Add a RateLimitMiddleware to prevent ddos or DB drinking - for examples:
-        // HTTPStatus - 429 Too Many Requests (rate limiting)
-        // see: https://github.com/devmaximilian/RateLimitMiddleware
-        // see: https://github.com/nodes-vapor/gatekeeper
-        
-        //  ===  CORS handling middleware:  ===
-        // Make sure CORSMiddleware is inserted before all your error/abort middlewares, so that even the failed request responses contain proper CORS information. Given that thrown errors are immediately returned to the client, the CORSMiddleware must be listed before the ErrorMiddleware; otherwise the HTTP error response will be returned without CORS headers, and cannot be read by the browser.
-        // Allow CORS ONLY for debug builds:
-        if (BuildType.currentBuildType == .debug && Debug.IS_DEBUG) {
-            /// CORSMiddleware.Configuration
-            /// - parameters:
-            ///   - allowedOrigin: Setting that controls which origin values are allowed.
-            ///   - allowedMethods: Methods that are allowed for a CORS request response.
-            ///   - allowedHeaders: Headers that are allowed in a response for CORS request.
-            ///   - allowCredentials: If cookies and other credentials will be sent in the response.
-            ///   - cacheExpiration: Optionally sets expiration of the cached pre-flight request in seconds.
-            ///   - exposedHeaders: Headers exposed in the response of pre-flight request.
-            let corsConfiguration = CORSMiddleware.Configuration(
-                allowedOrigin: .any(AppConstants.ALLOWED_DEBUG_CORS_URIS),
-                allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
-                allowedHeaders: [.accept, .authorization, .contentType, .origin, .xRequestedWith, .userAgent, .accessControlAllowOrigin],
-                allowCredentials: true
-            )
-            
-            app.middleware.use(CORSMiddleware(configuration: corsConfiguration))
-        }
-        
-        // === Error handling middleWre: (default is set with ErrorMiddleware) ===
-        // NOTE: custom Error middleware should be added early, but still requires CORSMiddleware to be added BEFORE this error middleware
-        app.middleware.use(AppErrorMiddleware.default(environment: app.environment)) //
-        
-        // === Sessions record? Session middleware ===
-        app.sessions.configuration.cookieName = "X-\(AppConstants.APP_NAME)-Cookie"
-        //   app.sessions.use(.fluent) // SESSION DRIVER: Uses the db for the session mapping
-        //   app.sessions.use(.redis) // SESSION DRIVER: Uses redis for the session mapping
-        app.sessions.use(.memory) // SESSION DRIVER: Use in-memory for session mapping
-        app.migrations.add(SessionRecord.migration)
-        
-        app.sessions.configuration.cookieFactory = self.sessionCookieFactory // Configures cookie value creation.
-        // Optional: config a session driver:
-        // NOTE: !! The session driver should be configured before adding app.sessions.middleware to your application.
-        app.middleware.use(app.sessions.middleware)
-        
-        // Permissions / Rabac
-        // TODO:
-        /*
-        let permissionsMiddleware = AppPermissionMiddleware.default(environment: app.environment)
-        AppServer.shared.permissions = permissionsMiddleware
-        app.middleware.use(permissionsMiddleware)
-         */
-        
-        // Uncomment to serve files from /Public folder
-        // Also need to setup working directory in Edit Scheme -> Options -> Working Directory to app root path (where the pakage sits)
-        // This alows serving public files (such as faviocn.ico etc)
-        app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
-        
-        // Authentication middleware (for all routes, all the time)
+        // == Authentication middleware (for all routes, all the time) ==
         // DO NOT USE HERE! IS USED BY SPECIFIC ROUTING GROUPS! app.middleware.use(UserTokenAuthenticator())
         // DO NOT USE HERE! IS USED BY SPECIFIC ROUTING GROUPS! app.middleware.use(UserPasswordAuthenticator())
 
@@ -359,11 +357,7 @@ fileprivate class AppConfigurator {
         
         // JWT: Add HMAC with SHA-256 signer key
         app.jwt.signers.use(.hs256(key: AppConstants.ACCESS_TOKEN_JWT_KEY))
-        
         app.routes.caseInsensitive = true
-        
-        // Boot and make sure to Register app routes:
-        // CHECK IF NEEDED: try AppServer.shared.routeMgr.bootRoutes(app)
     }
     
     // MARK: Debug / Mockup
@@ -465,6 +459,7 @@ fileprivate class AppConfigurator {
             try configureDB(app)
             
             AppServer.shared.dbName = self.dbName
+            
             // // TODO: uncomment:  AppServer.shared.users.db = app.db
             // // TODO: AppServer.shared.permissions?.db = app.db
             

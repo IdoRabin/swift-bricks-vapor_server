@@ -15,10 +15,12 @@ import NIO
 import DSLogger
 import MNUtils
 import MNVaporUtils
+import RRabac
 
 fileprivate let dlog : DSLogger? = DLog.forClass("App")
 
-enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible {
+enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIterable {
+    
     case production
     case development
     case testing
@@ -26,6 +28,7 @@ enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible {
     
     static var staging = AppServerEnvironment.development
     static var allStatic : [AppServerEnvironment] = [.production, .development, .testing]
+    static var allCases = [AppServerEnvironment.production, .development, .testing, .custom("Unknown")]
     
     var description: String {
         var result = "Unknown?"
@@ -55,7 +58,11 @@ weak var globalVaporApplication : Application? = nil
 // Wrapper for Vapor Application (cannot subclass or extend since it is final)
 class AppServer : LifecycleHandler {
     
-    static let INITIAL_DB_NAME = "?"
+    static let INITIAL_DB_NAME : String = "?"
+    static var DEFAULT_DOMAIN : String = "com.\(AppConstants.APP_NAME.snakeCaseToCamelCase())"
+    static var DEFAULT_ADMIN_DISPLAY_NAME : String = "admin" + String.ZWSP
+    static var DEFAULT_ADMIN_IIP_USERNAME : String = "admin"
+    static var DEFAULT_ADMIN_IIP_PWD : String = "12345678aA!"
     
     // UserMgr.shared.db = app.db // set weak db in UserMgr
     // MARK: members
@@ -63,14 +70,14 @@ class AppServer : LifecycleHandler {
     weak var vaporApplication : Application? = nil
     // weak var permissions : AppPermissionMiddleware? = nil
     // UNCOMMENT var users : UserMgr = UserMgr()
-    private var _routeMgr : MNRoutes? = nil
-    public var routeMgr : MNRoutes {
+    private var _routes : MNRoutes? = nil
+    public var routes : MNRoutes {
         get {
-            return _routeMgr!
+            return _routes!
         }
         set {
-            if self._routeMgr !== newValue {
-                self._routeMgr = newValue
+            if self._routes !== newValue {
+                self._routes = newValue
             }
         }
     }
@@ -116,11 +123,32 @@ class AppServer : LifecycleHandler {
     }
     
     // MARK: Singleton
+    func initRouteMgrIfNeeded() {
+        if self._routes == nil, let vapp = self.vaporApplication {
+            routes = MNRoutes(app: vapp)
+            if globalMNRouteMgr == nil {
+                globalMNRouteMgr = routes
+            }
+            
+            dlog?.success("initRouteMgrIfNeeded")
+        }
+        
+        if let rrabacMiddleware = self.vaporApplication?.middleware(ofType: RRabacMiddleware.self) {
+            AppServer.shared.routes.bootStater.observers.add(observer: rrabacMiddleware)
+        } else {
+            dlog?.verbose(log: .note, "initRouteMgrIfNeeded: RRabacMiddleware was not found!")
+        }
+    }
+    
     public static let shared = AppServer()
     private init() {
+        MNUTILS_DEFAULT_APP_NAME = "Bricks Server"
+        
+        // TODO: Check if IS_DEBUG should be an @inlinable var ?
+        MNUtils.debug.IS_DEBUG = Debug.IS_DEBUG
         Self.isInitializing = true
         isBooting = true
-//        routeMgr = MNRoutes()
+        self.initRouteMgrIfNeeded()
         // Rabac.shared.setupIfNeeded()
         Self.isInitializing = false
     }
@@ -160,10 +188,23 @@ class AppServer : LifecycleHandler {
     // MARK: LifecycleHandler
     func willBoot(_ application: Vapor.Application) throws {
         // TODO: try self.permissions?.willBoot(application)
-        dlog?.info("> Vapor app will Boot Nr.# \(self.launchCountHexString)")
+        dlog?.info("> Vapor app will Boot Nr.# \(self.launchCountHexString) vaporApp: <\(self.vaporApplication.descOrNil) \(String(memoryAddressOfOrNil: self.vaporApplication))>")
+        self.initRouteMgrIfNeeded()
     }
     
-    func didBoot(_ application: Vapor.Application) throws {
+    func didBoot(_ app: Vapor.Application) throws {
+        self.initRouteMgrIfNeeded()
+        
+        // Boot and make sure to Register app routes:
+        try AppServer.shared.routes.bootRoutes(app, controllers: [
+            //                DashboardController(),
+            //                UserController(),
+            UtilController(app: app),
+        ])
+        
+        // Prefilldata if needed
+        AppPrefillData().prefillDataIfNeeded(app: self, db: app.db)
+        
         // TODO:
         /*
         // Wait for isDBLoaded to be true:
@@ -187,7 +228,7 @@ class AppServer : LifecycleHandler {
         dlog?.success("Vapor app did Boot: [\(Bundle.main.bundleName ?? "BServer") v\(Bundle.main.fullVersion) ] run Nr.#\(self.launchCountHexString) -[\(self.environment)]-")
          
         // NOTE: Call secureRoutesAfterBoot only after changing the isBooting flag to false:
-        self.routeMgr.secureRoutesAfterBoot(application)
+        self.routes.secureRoutesAfterBoot(app)
         
         // TODO:
         /*

@@ -14,7 +14,7 @@ extension AppValidationResult : AppValidatorResult {
     // Adapt the protocol to return response values from AppResult<AppValidatorSuccessReason>
     
     public var failureCode: Int? {
-        return self.appError?.code
+        return self.appErrorValue?.code
     }
     
     public var isFailure: Bool {
@@ -29,7 +29,7 @@ extension AppValidationResult : AppValidatorResult {
     }
     
     public var failureDescription: String? {
-        return self.appError?.reasonsLines ?? self.appError?.reason
+        return self.appErrorValue?.reasonsLines ?? self.appErrorValue?.reason
     }
     
     static func by(test:()->Bool, success:Success, error:AppError)->AppResult<Success> {

@@ -28,9 +28,9 @@ extension PostgresDBActions : DBActionProvider {
     }
     
     func dropAllTables(db: Database, ignoreFluentTables : Bool, completion:@escaping (AppResult<String>)->Void) {
-        preconditionFailure("REIMPLEMENT dropAllTables(db)")
         // Query all table names:
-        /* self.existingTableNames(db: db, ignoreFluentTables: ignoreFluentTables) { namesResult in
+        
+        self.allTableNamesCompletion(db: db, ignoreFluentTables: ignoreFluentTables) { namesResult in
             switch namesResult {
             case .success(let names):
                 
@@ -47,34 +47,37 @@ extension PostgresDBActions : DBActionProvider {
                         case .failure(let error):
                             db.logger.notice("Drop tables failed with error:\(error.localizedDescription)")
                             completion(AppResult<String>.failure(fromError: error))
-                        case .success(let pgResult):
-                            db.logger.info("Drop table result: \(pgResult.rows)")
-                            completion(.success("tables \(names.descriptionJoined) dropped!"))
+                        case .success: // (let pgTablesResult):
+                            
+                            // Drop all migrations records:
+                            let queryString2 = """
+                            DELETE FROM _fluent_migrations;
+                            """
+                            let query2 = (db as? PostgresDatabase)?.query(queryString2) // drop all records from "_fluent_migrations"
+                            query2?.whenComplete({ result in
+                                switch result {
+                                case .failure(let error):
+                                    db.logger.notice("Drop migration tables failed with error:\(error.localizedDescription)")
+                                    completion(AppResult<String>.failure(fromError: error))
+                                case .success(let pgMigrationsResult):
+                                    db.logger.info("Dropped tables: \(names.descriptionJoined) | migrations: \(pgMigrationsResult.rows.descriptionsJoined)")
+                                    completion(.success("Dropped \(names.count) tables: \(names.descriptionJoined) "))
+                                }
+                            })
                         }
-                        
-                        // Drop all migrations records:
-                        let queryString2 = """
-                        DELETE FROM _fluent_migrations;
-                        """
-                        let query2 = (db as? PostgresDatabase)?.query(queryString2) // drop all records from "_fluent_migrations"
-                        query2?.whenComplete({ result in
-                            switch result {
-                            case .failure(let error):
-                                db.logger.notice("Drop migration tables failed with error:\(error.localizedDescription)")
-                                completion(AppResult<String>.failure(fromError: error))
-                            case .success(let pgResult):
-                                db.logger.info("Drop migration tables result: \(pgResult.rows)")
-                            }
-                        })
                     })
                 } else {
                     completion(.success("No tables to delete (0 table names found)"))
                 }
             case .failure(let error):
-                completion(AppResult<String>.failure(fromError: error))
+                if error.appErrorCode() == .some(AppErrorCode.db_empty_result) {
+                    completion(AppResult<String>.success("No tables to delete (0 table names found)"))
+                } else {
+                    completion(AppResult<String>.failure(fromError: error))
+                }
+                
             }
         }
-         */
     }
 }
 
@@ -104,7 +107,7 @@ extension PostgresDBActions : DBInfoProvider {
         var aerror : AppError? = nil
         let NIL_ERR = "- NIL -"
         
-         do {
+//         do {
             if let postgresResult = queryResult {
                 result = postgresResult.compactMap { pgRow in
                     // This allows accessing columns with O(1) instead of O(n) where n is number of rows.
@@ -131,15 +134,15 @@ extension PostgresDBActions : DBInfoProvider {
                 })
                 
                 if result.count == 0 {
-                    aerror = AppError(code:.db_failed_migration, reason: "asyncExistingTableNames returned 0 table names!")
+                    aerror = AppError(code:.db_empty_result, reason: "asyncExistingTableNames returned 0 table names!")
                 }
             } else {
                 aerror = AppError(code:.db_failed_migration, reason: "asyncExistingTableNames returned nil!")
             }
-         } catch let error {
-            db.logger.notice("asyncExistingTableNames failed with error:\(error.description)")
-            aerror = AppError(error:error)
-         }
+//         } catch let error {
+//            db.logger.notice("asyncExistingTableNames failed with error:\(error.description)")
+//            aerror = AppError(error:error)
+//         }
         
         if let aerror = aerror {
             return .failure(aerror)

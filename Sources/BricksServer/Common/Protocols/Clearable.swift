@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ClearType {
+public enum ClearType : Int, CaseIterable {
     case clearAllData
     case clearSyncData
     case debugClear

@@ -80,7 +80,7 @@ struct AppRouteAuth: OptionSet, Equatable, Hashable, JSONSerializable {
 // MARK: Codable
 extension AppRouteAuth : LosslessStrEnum {
     
-    enum CodingKeys : String, CodingKey {
+    enum CodingKeys : String, CodingKey, CaseIterable {
         case type_int = "type_int"
         case type_str = "type"
     }

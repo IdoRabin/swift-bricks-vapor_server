@@ -31,7 +31,7 @@ class AppConstants {
     static let BRICK_FILE_EXTENSION = "bricks"
     static let IS_RTL_LAYOUT = false
     static let CLIENT_SETTINGS_FILENAME = "bricks_app_settings"
-    static let APP_NAME = APP_NAME_STR
+    static var APP_NAME = APP_NAME_STR
     static let APP_DISPLAY_NAME = "Bricks"
     
     // ==== SERVER ====
@@ -74,9 +74,13 @@ class AppConstants {
 }
 
 class Debug {
-    
+    #if DEBUG
     static let IS_DEBUG = true // TODO: Check if IS_DEBUG should be an @inlinable var ?
-    static let RESET_DB_ON_INIT = Debug.IS_DEBUG && false // Will wipe
+    #else
+    static let IS_DEBUG = false // TODO: Check if IS_DEBUG should be an @inlinable var ?
+    #endif
+    
+    static let RESET_DB_ON_INIT = Debug.IS_DEBUG && true // Will wipe
     static let RESET_SETTINGS_ON_INIT = Debug.IS_DEBUG && false
     
     static func StringOrNil(_ str:String)->String? {

@@ -9,6 +9,7 @@
 import Foundation
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 // import Codextended
 
@@ -27,8 +28,8 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     
     // MARK: Types
     struct AppSettingsGlobal : Codable {
-        @AppSettable(name:"global.newUsernameAllowedTypes", default:UsernameType.allActive) var newUsernameAllowedTypes : [UsernameType]
-        @AppSettable(name:"global.existingAllowedTypes", default:UsernameType.allActive) var existingUsernameAllowedTypes : [UsernameType]
+        @AppSettable(name:"global.newAllowedPIITypes", default:MNUserPIISet.allCases) var newAllowedPIITypes : MNUserPIISet
+        @AppSettable(name:"global.existingAllowedPIITypes", default:MNUserPIISet.allCases) var existingAllowedPIITypes : MNUserPIISet
     }
     
     struct AppSettingsClient : Codable {
@@ -153,7 +154,7 @@ final class AppSettings : AppSettingProvider, JSONFileSerializable {
     
     
     
-    private enum CodingKeys: String, CodingKey {
+    private enum CodingKeys: String, CodingKey, CaseIterable {
         case global = "global"
         case server = "server"
         case client = "client"

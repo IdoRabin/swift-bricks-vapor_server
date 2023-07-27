@@ -9,9 +9,17 @@ import Foundation
 import MNUtils
 import MNVaporUtils
 
+// This allows sublassing or extending without changing all code appearances:
 public typealias AppErrorCode = MNErrorCode
 public typealias AppErrorInt = MNErrorInt
- public typealias AppDBEnum = MNDBEnum
+public typealias AppDBEnum = MNDBEnum
+public typealias AppRoute = MNRoute
+public typealias AppRouteInfo = MNRouteInfo
+public typealias AppUser = MNUser
+
+public protocol AppPermissionGiver {
+    
+}
 
 typealias AppError = MNError // NOTE: suclassing will abolish visibility of convenience inits
 extension AppError {

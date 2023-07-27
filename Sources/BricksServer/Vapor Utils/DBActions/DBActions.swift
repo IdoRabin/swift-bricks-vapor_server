@@ -19,6 +19,7 @@ protocol DBActionProvider {
     func shutdown(db: Database)
 }
 
+/// Provides acces to DB-Wide actions such all "drop all tables" etc.
 class DBActions {
     
     static let postgres = PostgresDBActions()

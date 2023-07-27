@@ -19,7 +19,7 @@ fileprivate let dlog : DSLogger? = DLog.forClass("UtilController")
 //
 //}
 
-class UtilController : MNRoutingController {
+class UtilController : AppRoutingController {
     
     // MARK: Setup / Boot for routes:
     override func boot(routes: RoutesBuilder) throws {

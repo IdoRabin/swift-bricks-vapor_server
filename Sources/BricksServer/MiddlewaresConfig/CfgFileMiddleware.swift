@@ -11,7 +11,6 @@ import DSLogger
 import MNUtils
 fileprivate let dlog : DSLogger? = DLog.forClass("CfgFileMiddleware")?.setting(verbose: false)
 
-
 extension AppConfigurator {
     func configFileMiddleware() {
         guard let app = AppServer.shared.vaporApplication else {

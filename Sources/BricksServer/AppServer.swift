@@ -17,6 +17,8 @@ import MNUtils
 import MNVaporUtils
 import RRabac
 
+// TODO: Learn more regarding DocC - the apple Documentation Compiler for rich documentation.
+
 fileprivate let dlog : DSLogger? = DLog.forClass("App")
 
 enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIterable {
@@ -69,7 +71,7 @@ class AppServer : LifecycleHandler {
     weak var settings = AppSettings.shared
     weak var vaporApplication : Application? = nil
     // weak var permissions : AppPermissionMiddleware? = nil
-    // UNCOMMENT var users : UserMgr = UserMgr()
+    weak var users : UserController? = nil
     private var _routes : MNRoutes? = nil
     public var routes : MNRoutes {
         get {
@@ -196,11 +198,13 @@ class AppServer : LifecycleHandler {
         self.initRouteMgrIfNeeded()
         
         // Boot and make sure to Register app routes:
+        let userContoller = UserController(app:app)
         try AppServer.shared.routes.bootRoutes(app, controllers: [
-            //                DashboardController(),
-            //                UserController(),
+            //DashboardController(),
+            userContoller,
             UtilController(app: app),
         ])
+        self.users = userContoller
         
         // Prefilldata if needed
         AppPrefillData().prefillDataIfNeeded(app: self, db: app.db)

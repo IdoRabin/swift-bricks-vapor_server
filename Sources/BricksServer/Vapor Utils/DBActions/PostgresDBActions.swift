@@ -8,6 +8,7 @@
 import Foundation
 
 #if NIO || VAPOR || FLUENT || POSTGRES
+
 import Fluent
 import FluentKit
 import FluentPostgresDriver

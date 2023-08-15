@@ -19,7 +19,7 @@ fileprivate struct UserControllerPrefill : AppPermissionGiver {
 }
 extension UserController /* +Prefill */ {
 
-    func prefillAdminUsersData(db:Database, user prefillUser:MNUser? = nil) async throws {
+    func prefillAdminUsersData(db:Database, user prefillUser:AppUser? = nil) async throws {
         
         dlog?.verbose("prefillAdminUsersData(app:user?:)")
         
@@ -41,27 +41,32 @@ extension UserController /* +Prefill */ {
             // Get or create user if needed
             
             // Get or create user info if needed
-            var user : MNUser? = nil
+            var user : AppUser? = nil
             do {
                 user = try await AppServer.shared.users?.dbCreateUser(
                     db:db,
                     displayName: prefillUser?.displayName ?? piiUserDisplayName,
                     pii: prefillUser?.loginInfos.first?.loginPII?.asPII(db:db) ?? pii,
+                    userSetup: { usr in
+                        // Change any other prop for user before save
+                        usr.status = .active
+                    },
                     permissionGiver: prefiller)
                 
                 dlog?.verbose("prefillAdminUsersData Admin user was found or created: \(user.descOrNil)")
             } catch let error {
                 let code = (error as? MNError)?.code ?? (error as NSError).code
-                dlog?.verbose(log:.note,"prefillAdminUsersData: error creating user, code: \(code) error:\(String(reflecting: error))")
                 
                 switch code {
+                case AppErrorCode.db_already_exists.rawValue:
+                    dlog?.info("prefillAdminUsersData user [\(piiUserDisplayName)] already exists")
                 case AppErrorCode.user_invalid_username.rawValue,
                     AppErrorCode.user_login_failed_user_name.rawValue,
                     AppErrorCode.user_login_failed_user_not_found.rawValue:
                     // User does not exist:
                     dlog?.info("prefillAdminUsersData user [\(piiUserDisplayName)] does not exist:")
                 default:
-                    break
+                    dlog?.verbose(log:.note,"prefillAdminUsersData: error creating user, code: \(code) error:\(String(reflecting: error))")
                 }
             }
         }

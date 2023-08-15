@@ -94,7 +94,8 @@ class AppServer : LifecycleHandler {
     // READ-ONLY! increment should be made to settings?.stats.launchCount
     var launchCount : Int {
         get {
-            return 999999 // TODO: self.settings?.stats.launchCount ?? 1
+            let result = 0xffffff //self.settings?.stats.launchCount ?? 1
+            return result
         }
     }
     
@@ -149,6 +150,7 @@ class AppServer : LifecycleHandler {
         // TODO: Check if IS_DEBUG should be an @inlinable var ?
         MNUtils.debug.IS_DEBUG = Debug.IS_DEBUG
         Self.isInitializing = true
+        _ = AppSettings.shared // trigger init
         isBooting = true
         self.initRouteMgrIfNeeded()
         // Rabac.shared.setupIfNeeded()
@@ -221,11 +223,11 @@ class AppServer : LifecycleHandler {
         */
         
         // Change stats on launch
+        /*
         settings?.blockChanges(block: { settings in
-            // TODO:
-//            settings.stats.launchCount = self.launchCount
-//            settings.stats.lastLaunchDate = Date();
-        })
+            settings.stats.launchCount = self.launchCount
+            settings.stats.lastLaunchDate = Date();
+        })*/
         
         isBooting = false
         

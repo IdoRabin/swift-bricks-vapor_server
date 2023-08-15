@@ -328,7 +328,10 @@ enum AppStr : Localizable {
     }
     
     private static let numFmtStrings = ["%zd",  "%ld",  "%d",  "%f",  "%0.2f"]
+    
+    // TODO: Actor? Locks?
     private static let formatTypeCache = MNCache<String,FormatStrType>(name: "AppStr.formatTypeCache", maxSize: 500, attemptLoad: .immediate)
+    
     private static func formatStrType(string:String, key:String)->FormatStrType {
         var result : FormatStrType = formatTypeCache[key] ?? .fmt_none
         

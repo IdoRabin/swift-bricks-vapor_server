@@ -8,15 +8,52 @@
 import Foundation
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("AppSettable")
 
-fileprivate var appSettings : AppSettings? = nil
+fileprivate weak var appSettings : AppSettings? = nil
+
+protocol AppSettableKind {
+    static var valueType : any Any.Type { get }
+    var valueType : any Any.Type { get }
+}
+
+extension AppSettableKind /* default implementation */ {
+    var valueType : any Any.Type {
+        return Self.valueType
+    }
+}
+
+typealias AppSettableValue = Equatable & Codable & Sendable
+
+extension AppSettable : AppSettableKind {
+    static var valueType : any Any.Type {
+        return T.self
+    }
+    
+    func setValue<TOther>(_ val : TOther) {
+        guard let val = val as? T else {
+            dlog?.note("AppSettable<\(TOther.self)>.setValue: \(val). failed: Types mismatch: the param value type should be expected as a: \(valueType.self), not \(TOther.self).")
+            return
+        }
+        self.wrappedValue = val as T
+    }
+
+    func getValue<TOther>()->TOther? {
+        guard T.self == valueType else {
+            dlog?.note("AppSettable<\(TOther.self)>.getValue:. failed: Types mismatch: the return value type should be expected as a: \(valueType.self), not \(TOther.self).")
+            return nil
+        }
+        return self.wrappedValue as? TOther
+    }
+}
 
 // MARK: AppSettable protocol - depends on AppSettings
 @propertyWrapper
-struct AppSettable<T:Equatable & Codable> : Codable {
-    
+final class AppSettable<T:AppSettableValue> : Codable {
+    nonisolated private let lock = MNLock(name: "\(AppSettable.self)")
+
     static var settingsInstance : AppSettings? {
         get {
             return appSettings
@@ -29,7 +66,11 @@ struct AppSettable<T:Equatable & Codable> : Codable {
         }
     }
     static func setSettingsInstance(instance: AppSettings) {
-        
+        if appSettings == nil {
+            appSettings = instance
+        } else {
+            dlog?.warning("AppSettable \(Self.self) | \(self) already has appSettings defined!")
+        }
     }
     
     enum CodingKeys : String, CodingKey, CaseIterable {
@@ -39,19 +80,23 @@ struct AppSettable<T:Equatable & Codable> : Codable {
     
     // MARK: properties
     private var _value : T
-    @SkipEncode var name : String = ""
+    @SkipEncodeSendable var name : String = ""
     
     var wrappedValue : T {
         get {
-            return _value
+            return lock.withLock {
+                return _value
+            }
         }
         set {
-            let oldValue = _value
-            let newValue = newValue
-            if newValue != oldValue {
-                _value = newValue
-                let changedKey = name.count > 0 ? "\(self.name)" : "\(self)"
-                AppSettings.shared.noteChange(changedKey, newValue: newValue)
+            lock.withLockVoid {
+                let oldValue = _value
+                let newValue = newValue
+                if newValue != oldValue {
+                    _value = newValue
+                    let changedKey = name.count > 0 ? "\(self.name)" : "\(self)"
+                    AppSettings.shared.noteChange(key:changedKey, newValue: newValue)
+                }
             }
         }
     }
@@ -60,23 +105,44 @@ struct AppSettable<T:Equatable & Codable> : Codable {
         
         // basic setup:
         self.name = newName
+        self._value = defaultValue
+        
+        AppSettings.registerDefaultValue(key:newName, value:defaultValue)
+        guard AppSettings.sharedIsLoaded else {
+            return
+        }
+        
+        dlog?.info("ha!!!!! \(newName) : \(defaultValue)")
+        self.wrappedValue = defaultValue
         
         // Adv. setup:
-        if AppSettings.isLoaded {
-            // dlog?.info("searching for [\(newName)] in \(AppSettings.shared.other.keysArray.descriptionsJoined)")
-            if let loadedVal = AppSettings.shared.other[newName] as? T {
-                self._value = loadedVal
-                dlog?.success("found and set for [\(newName)] in \(AppSettings.shared.other.keysArray.descriptionsJoined)")
-            } else {
-                if Debug.IS_DEBUG && AppSettings.shared.other[newName] != nil {
-                    dlog?.warning("failed cast \(AppSettings.shared.other[newName].descOrNil) as \(T.self)")
-                }
-                
-                self._value = defaultValue
-            }
-        } else {
-            self._value = defaultValue
-        }
+//        if let value = AppSettings.shared.getOtherValue(named:"newName") {
+//
+//        }
+//        Task {
+//            var newValue : T = defaultValue
+//            // dlog?.info("searching for [\(newName)] in \(AppSettings.shared.other.keysArray.descriptionsJoined)")
+//            if let loadedVal = await AppSettings.shared.other[newName] as? T {
+//                newValue = loadedVal
+//                let keys = await AppSettings.shared.other.keysArray.descriptionsJoined
+//                dlog?.success("found and set for [\(newName)] in \(keys)")
+//            } else {
+//                if Debug.IS_DEBUG && AppSettings.shared.other[newName] != nil {
+//                    let desc = await AppSettings.shared.other[newName].descOrNil
+//                    dlog?.warning("failed cast \(desc) as \(T.self)")
+//                }
+//
+//                // newValue =
+//            }
+//            return newValue
+//        }
+//
+//        if let newValue = newValue {
+//            dlog?.info("Default value [\(self.name)] - setting to \(newValue)")
+//            self._value = newValue
+//        } else {
+//            dlog?.info("Default value [\(self.name)] - NOT FOUND- set \(newValue)")
+//        }
     }
     
     // MARK: AppSettable: Decodable
@@ -91,7 +157,9 @@ struct AppSettable<T:Equatable & Codable> : Codable {
     // MARK: AppSettable: Encodable
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(name,   forKey: .name)
-        try container.encode(_value, forKey: .value)
+        try lock.withLockVoid {
+            try container.encode(name,   forKey: .name)
+            try container.encode(_value, forKey: .value)
+        }
     }
 }

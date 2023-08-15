@@ -45,7 +45,9 @@ class AppPrefillData {
                 
                 // Save settings
                 AppPrefillData.wasPrefilled = true
-                app.settings?.saveIfNeeded()
+                
+                // TODO: Re-implement
+                // await app.settings?.saveIfNeeded()
             }
         } else {
             dlog?.verbose(log: .note, "prefillDataIfNeeded: DB was already prefilled w/ admin etc.")

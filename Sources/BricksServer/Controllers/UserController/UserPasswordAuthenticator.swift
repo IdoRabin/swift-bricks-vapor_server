@@ -37,7 +37,7 @@ class UserPasswordAuthenticator : Vapor.BasicAuthenticator {
 //            // Find PIIs with this given username:
 //            let piisFutures = MNUserPII.query(on: req.db).filter(\.$piiValue ~= inputUsernameStr).top(5)
 //            let res = piisFutures.flatMapResult({ piis in
-//                var result : Result<MNUser, MNError> = .failure(MNError(code:.user_login_failed_user_name, reason: "The user for the login credentials ware unknown"))
+//                var result : Result<AppUser, MNError> = .failure(MNError(code:.user_login_failed_user_name, reason: "The user for the login credentials ware unknown"))
 //                var xError : MNError? = nil
 //                let count = piis.count
 //                switch count {

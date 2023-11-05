@@ -10,15 +10,18 @@ import Vapor
 import FluentKit
 import DSLogger
 
+import MNSettings   // AppSettable
 import MNVaporUtils // contains some needed fluent models
 import RRabac       // contains some needed fluent models
 
-fileprivate let dlog : DSLogger? = DLog.forClass("App")?.setting(verbose: true)
+
+fileprivate let dlog : DSLogger? = DLog.forClass("AppPrefillData")?.setting(verbose: false)
 
 class AppPrefillData {
     
     // MARK: Properties
-    @AppSettable(name: "AppPrefillData.wasPrefilled", default: false) static var wasPrefilled : Bool
+    @AppSettable(key: "AppPrefillData.wasPrefilled", default: false) static var wasPrefilled : Bool
+    @AppSettable(key: "noCatDebugTestTry", default: false) static var noCatDebugTestTry : Bool
     
     // MARK: Private
     private func prefillRRabacDataIfNeeded(app:AppServer, db:Database) async throws {

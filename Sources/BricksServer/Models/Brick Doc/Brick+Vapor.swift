@@ -18,7 +18,7 @@ fileprivate let dlog : DSLogger? = DLog.forClass("Brick")
 
 // Extensions requiring no implementations
 extension Brick : Content {}
-extension Brick : Authenticatable {}
+// extension Brick : @unchecked Sendable, Authenticatable {}
 extension Brick : AsyncResponseEncodable {}
 
 /// Keys for data stored in the Brick of Requests:

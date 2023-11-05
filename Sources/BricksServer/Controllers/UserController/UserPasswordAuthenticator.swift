@@ -32,6 +32,7 @@ class UserPasswordAuthenticator : Vapor.BasicAuthenticator {
         let domain = req.domain ?? AppServer.DEFAULT_DOMAIN
         var anError : MNError? = nil
         do {
+            dlog?.todo("Reimplement func authenticate!!")
 //            let inputHashedPwd = try Self.digestPwdPlainText(plainText:basic.password)
 //
 //            // Find PIIs with this given username:

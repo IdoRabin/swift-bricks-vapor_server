@@ -7,6 +7,7 @@
 
 import Foundation
 import MNUtils
+import MNSettings
 import MNVaporUtils
 
 // This allows sublassing or extending without changing all code appearances:
@@ -16,7 +17,8 @@ public typealias AppDBEnum = MNDBEnum
 public typealias AppRoute = MNRoute
 public typealias AppRouteInfo = MNRouteInfo
 public typealias AppUser = MNUser
-
+public typealias AppSettable = MNSettable
+public typealias AppRouteContext = MNRouteContext
 public protocol AppPermissionGiver {
     
 }

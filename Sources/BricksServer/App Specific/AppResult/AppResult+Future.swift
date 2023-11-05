@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  AppResult+Future.swift
 //  
 //
 //  Created by Ido on 10/02/2023.

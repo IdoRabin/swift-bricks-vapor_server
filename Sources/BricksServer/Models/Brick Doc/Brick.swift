@@ -21,7 +21,7 @@ protocol Changable : AnyObject {
 }
 
 final class Brick : Codable, CustomDebugStringConvertible, MNUIDable {
-    static let mnuidStr: String = "BRK_DOC"
+    static let mnuidTypeStr: String = "BRK_DOC"
     
     @Group(key: CodingKeys.info.fieldKey)
     var info : BrickBasicInfo

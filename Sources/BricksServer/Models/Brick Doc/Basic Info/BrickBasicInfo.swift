@@ -14,7 +14,7 @@ import MNUtils
 fileprivate let dlog : DSLogger? = DLog.forClass("BrickBasicInfo")
 
 final class BrickBasicInfo : Codable, Hashable, MNUIDable {
-    static let mnuidStr: String = "BRK_INF"
+    static let mnuidTypeStr: String = "BRK_INF"
     
     
     @Field(key: CodingKeys.creationDate.fieldKey)

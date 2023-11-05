@@ -26,7 +26,8 @@ func AppResultOrErr<Success:Any>(_ result:Success?, error:AppError)->AppResult<S
 
 extension Result {
     
-    static func failure<Success:Any>(fromError error: any Error)->AppResult<Success> {
+    // <Success:Any>
+    static func failure(fromError error: any Error)->AppResult<Success> {
         var result : AppResult<Success>
         
         if let appError = error as? AppError {
@@ -38,20 +39,20 @@ extension Result {
         return result
     }
     
-    static func failure<Success:Any>(fromAppError appError:AppError)->AppResult<Success> {
+    static func failure(fromAppError appError:AppError)->AppResult<Success> {
         return AppResult.failure(appError)
     }
     
-    static func failure<Success:Any>(code appErrorCode:AppErrorCode, reason:String? = nil)->AppResult<Success> {
+    static func failure(code appErrorCode:AppErrorCode, reason:String? = nil)->AppResult<Success> {
         return AppResult<Success>.failure(fromAppError:AppError(code:appErrorCode, reason:reason))
     }
     
-    static func failure<Success:Any>(code appErrorCode:AppErrorCode, reasons:[String]? = nil)->AppResult<Success> {
+    static func failure(code appErrorCode:AppErrorCode, reasons:[String]? = nil)->AppResult<Success> {
         
         return AppResult<Success>.failure(fromAppError:AppError(code:appErrorCode, reasons:reasons))
     }
     
-    static func fromError<Success:Any>(_ error:Error?, orSuccess:Success)->AppResult<Success> {
+    static func fromError(_ error:Error?, orSuccess:Success)->AppResult<Success> {
         if let appError = error as? AppError {
             return Self.fromAppError(appError, orSuccess: orSuccess)
         } else if let err = error as? NSError {
@@ -61,7 +62,7 @@ extension Result {
         }
     }
     
-    static func fromAppError<Success:Any>(_ appError:AppError?, orSuccess:Success)->AppResult<Success> {
+    static func fromAppError(_ appError:AppError?, orSuccess:Success)->AppResult<Success> {
         if let appError = appError {
             return .failure(appError)
         } else {

@@ -9,6 +9,7 @@ import Vapor
 import Fluent
 import FluentKit
 import DSLogger
+import MNSettings
 import MNUtils
 import MNVaporUtils
 
@@ -49,8 +50,8 @@ struct SelfAccessTokenStorageKey : ReqStorageKey {
 // Controller for managing users and their login states:
 class UserController: AppRoutingController {
     
-    @AppSettable(name:"UserController.accessTokenRecentlyRenewedTimeInterval", default: AppConstants.ACCESS_TOKEN_RECENT_TIMEINTERVAL_THRESHOLD) static var accessTokenRecentlyRenewedTimeInterval : TimeInterval
-    @AppSettable(name:"UserController.accessTokenExpirationDuration", default: AppConstants.ACCESS_TOKEN_EXPIRATION_DURATION) static var accessTokenExpirationDuration : TimeInterval
+    @AppSettable(key:"UserController.accessTokenRecentlyRenewedTimeInterval", default: AppConstants.ACCESS_TOKEN_RECENT_TIMEINTERVAL_THRESHOLD) static var accessTokenRecentlyRenewedTimeInterval : TimeInterval
+    @AppSettable(key:"UserController.accessTokenExpirationDuration", default: AppConstants.ACCESS_TOKEN_EXPIRATION_DURATION) static var accessTokenExpirationDuration : TimeInterval
     let basePath = RoutingKit.PathComponent(stringLiteral: "user")
     
     struct BearerToken : Codable {
@@ -110,7 +111,7 @@ class UserController: AppRoutingController {
     // MARK: Controller API:
     // Controller methods should always accept a Request and return something ResponseEncodable
     override func boot(routes: RoutesBuilder) throws {
-        var noProtGroupInfo = AppRouteInfo()
+        let noProtGroupInfo = AppRouteInfo()
         
         // Listed below are all the routing groups:
         let groupName = basePath.description
@@ -123,7 +124,7 @@ class UserController: AppRoutingController {
             // let groupInfo = AppRouteInfo(requiredAuth: .userPassword)
             loginRoutes.on([.POST, .GET], pathComp("login"), use: login)?.setting(
                 productType: .apiResponse,
-                title: "login",
+                title: "login user",
                 description: "login as a user of the client app. The user password provided must match an existing user's credentials.",
                 requiredAuth:.userPassword,
                 group: groupName)
@@ -136,7 +137,7 @@ class UserController: AppRoutingController {
             // "Create" does not require id because the user being crated has no id (YET):
             rprotected.on([.POST], [basePath, pathComp("create")], use: createUser)?.setting(
                 productType: .apiResponse,
-                title: "create",
+                title: "create user",
                 description: "Create a new user of the client app. Requires user creation credentials and permissions. New user should not have an existing username. A uuid passed for the new user is ignored and the uuid is created by the server only.",
                 requiredAuth:.bearerToken,
                 group: groupName)
@@ -244,7 +245,7 @@ class UserController: AppRoutingController {
     // MARK: public route functions
     func logout(req: Request) async throws -> UserLogoutResponse {
         throw Abort(.internalServerError, reason: "Unknown error has occured")
-        
+        // TODO: Reimplement!
 //        // 401 Unauthorized - use when access token is missing or wrong
 //        // 403 Forbidden - use when access token exists and is valid, but the permissions / role does not allow this operation
 //
@@ -272,7 +273,7 @@ class UserController: AppRoutingController {
     
     func isLoggedInCheck(req: Request) throws -> String {
         throw Abort(.internalServerError, reason: "Unknown error has occured")
-        
+        // TODO: Reimplement!
 //        let IS_RETURNS_USERID = Debug.IS_DEBUG
 //        let accessToken = req.accessToken // getAccessToken(context:"UserController.isLoggedInCheck")
 //        var userUUIDStr : String? = accessToken?.userUIDString
@@ -308,7 +309,7 @@ class UserController: AppRoutingController {
     // GET /users/:id
     func getUser(request: Request) async throws -> AppUser {
         throw Abort(.internalServerError, reason: "Unknown error has occured")
-        
+        // TODO: Reimplement!
 //        let selfUser : User? = request.getSelfUser(isTryDeepQuery:false)
 //        var result : User? = nil
 //
@@ -356,7 +357,7 @@ class UserController: AppRoutingController {
     // POST /users/create
     func createUser(request: Request) async throws -> UserCreateResponse {
         throw Abort(.forbidden, reason: "some user property not allowed")
-        
+        // TODO: Reimplement!
 //        guard let selfUser = request.getSelfUser(isTryDeepQuery:false) else {
 //            return try await request.eventLoop.makeFailedFuture(Abort(.unauthorized, reason: "no permissions")).get()
 //        }
@@ -411,7 +412,7 @@ class UserController: AppRoutingController {
     // PATCH /users/:id
     func updateUser(request: Request) async throws -> String {
         throw Abort(.internalServerError, reason: "Unknown error has occured")
-        
+        // TODO: Reimplement!
 //        guard let selfUser = request.selfUser else { // getSelfUser(isTryDeepQuery:false)
 //            throw try await request.eventLoop.makeFailedFuture(Abort(.unauthorized, reason: "no permissions")).get()
 //        }

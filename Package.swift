@@ -18,6 +18,7 @@ let package = Package(
          // In-House pakcages
         .package(path: "../../xcode/DSLogger"),
         .package(path: "../../xcode/MNUtils/MNUtils"), // from: "0.0.2"
+        .package(path: "../../xcode/MNSettings/MNSettings"), // from: "0.0.2"
         .package(path: "../../vapor/MNVaporUtils/"), // from: "0.0.2"
         .package(path: "../../vapor/RRabac"), // from: "0.0.1"
     ],
@@ -35,6 +36,7 @@ let package = Package(
                 // In-House pakcages
                 .product(name: "DSLogger", package: "DSLogger"),
                 .product(name: "MNUtils", package: "MNUtils"),
+                .product(name: "MNSettings", package: "MNSettings"),
                 .product(name: "MNVaporUtils", package: "MNVaporUtils"),
                 .product(name: "RRabac", package: "RRabac"),
             ],
@@ -56,6 +58,9 @@ let package = Package(
             ],
             swiftSettings: [
                 .define("TESTING"),
+                .define("VAPOR"), // Vapor framework, to distinguish in classes that are also used in iOS / macOS.
+                .define("PRODUCTION", .when(configuration: .release)),
+                .define("DEBUG", .when(configuration: .debug)),
             ]
         )
     ],

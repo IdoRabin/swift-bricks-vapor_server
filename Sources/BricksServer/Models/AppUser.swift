@@ -7,7 +7,10 @@
 
 import Foundation
 import Vapor
+import MNVaporUtils // defines MNUser
 
-extension AppUser  : Authenticatable {
+// aliased MNUser
+// MNUser+Vapor.swift requires @unchecked Sendable & Authenticatable by 
+extension AppUser  : @unchecked Sendable { // , Authenticatable
     
 }

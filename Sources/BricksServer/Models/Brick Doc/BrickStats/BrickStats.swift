@@ -12,7 +12,7 @@ import MNUtils
 
 // Vapor requires final class
 final class BrickStats: Codable, MNUIDable {
-    static let mnuidStr: String = "BRK_STT"
+    static let mnuidTypeStr: String = "BRK_STT"
     
     // MARK: fields
     var sessionCount : UInt = 1

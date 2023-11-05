@@ -13,6 +13,23 @@ import DSLogger
     import AppKit
 #endif
 
+struct BuildType: OptionSet, Codable, Hashable {
+    let rawValue: Int
+    
+    static let debug = BuildType(rawValue: 1 << 0)
+    static let production = BuildType(rawValue: 1 << 1)
+    
+    // All settings
+    static let all: BuildType = [.debug, .production]
+    
+    static var currentBuildType : BuildType {
+        if Debug.IS_DEBUG {
+            return .debug
+        }
+        return .production
+    }
+}
+
 class AppConstants {
     static let dlog : DSLogger? = DLog.forClass("Constants")
     
@@ -30,7 +47,6 @@ class AppConstants {
     // Brick files / Brick info
     static let BRICK_FILE_EXTENSION = "bricks"
     static let IS_RTL_LAYOUT = false
-    static let CLIENT_SETTINGS_FILENAME = "bricks_app_settings"
     static var APP_NAME = APP_NAME_STR
     static let APP_DISPLAY_NAME = "Bricks"
     
@@ -41,7 +57,6 @@ class AppConstants {
     static let ACCESS_TOKEN_JWT_KEY = "JWT_KEY_tk"
     static let ACCESS_TOKEN_EXPIRATION_DURATION : TimeInterval = 2 * TimeInterval.SECONDS_IN_A_WEEK
     static let ACCESS_TOKEN_RECENT_TIMEINTERVAL_THRESHOLD : TimeInterval = 20 * TimeInterval.SECONDS_IN_A_MINUTE
-    static let BSERVER_APP_SETTINGS_FILENAME = "bserver_app_settings"
     static let BSERVER_VERSION = "1.2.3"
     
     //// CORS: Cross origin allowed URI/IPs/Ports (?)

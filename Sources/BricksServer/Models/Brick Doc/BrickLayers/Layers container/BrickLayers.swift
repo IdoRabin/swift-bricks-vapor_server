@@ -9,6 +9,7 @@ import Foundation
 import Fluent
 import DSLogger
 import MNUtils
+import MNSettings
 
 fileprivate let dlog : DSLogger? = DLog.forClass("BrickLayers")
 fileprivate let dlogNL : DSLogger? = nil // DLog.forClass("BrickLayers+Nearest")
@@ -17,15 +18,15 @@ typealias BricksLayerUID = MNUID
 
 // Vapor requires final classes
 final class BrickLayers : CodableHashable, BasicDescable, MNUIDable {
-    static let mnuidStr: String = "BRK_LYRz"
+    static let mnuidTypeStr: String = "BRK_LYRz"
     
     static let MAX_LAYERS_ALLOWED = 32
     static let MIN_LAYER_NAME_LENGTH = 1
     static let MAX_LAYER_NAME_LENGTH = 128
     
     static let SETTING_ = 128
-    @AppSettable(name: "BrickLayers.selectAddedLayer", default: true) static var selectAddedLayer : Bool
-    @AppSettable(name: "BrickLayers.selectNearRemovedLayers", default: true) static var selectNearRemovedLayers : Bool
+    @AppSettable(key: "BrickLayers.selectAddedLayer", default: true) static var selectAddedLayer : Bool
+    @AppSettable(key: "BrickLayers.selectNearRemovedLayers", default: true) static var selectNearRemovedLayers : Bool
     
     enum CodingKeys : String, CodingKey, CaseIterable {
         case id                 = "id"
@@ -142,7 +143,7 @@ final class BrickLayers : CodableHashable, BasicDescable, MNUIDable {
     }
     
     var basicDesc : String {
-        return "<\(type(of: self)) \(String(memoryAddressOf: self)) \(self.count) layers>"
+        return "<\(type(of: self)) \(MemoryAddress(of: self)) \(self.count) layers>"
     }
 }
 

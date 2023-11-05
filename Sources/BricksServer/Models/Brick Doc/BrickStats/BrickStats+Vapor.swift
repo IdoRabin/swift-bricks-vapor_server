@@ -13,7 +13,7 @@ import Foundation
 import Vapor
 
 extension BrickStats : Content {}
-extension BrickStats : Authenticatable {}
+// extension BrickStats : @unchecked Sendable, Authenticatable {}
 extension BrickStats : AsyncResponseEncodable {}
 
 #endif // #if VAPOR

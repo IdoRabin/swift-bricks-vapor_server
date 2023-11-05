@@ -11,6 +11,6 @@ import Foundation
 import Vapor
 
 extension BrickBasicInfo : Content {}
-extension BrickBasicInfo : Authenticatable {}
+// extension BrickBasicInfo : @unchecked Sendable, Authenticatable {}
 extension BrickBasicInfo : AsyncResponseEncodable {}
 #endif

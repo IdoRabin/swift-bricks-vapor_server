@@ -14,7 +14,7 @@ import MNUtils
 fileprivate let dlog : DSLogger? = DLog.forClass("BrickLayer") 
 
 final class BrickLayer : MNUIDable, CodableHashable, CustomStringConvertible {
-    static let mnuidStr: String = "BRK_LYR"
+    static let mnuidTypeStr: String = "BRK_LYR"
     
     enum Selection : Int, Codable, CaseIterable {
         case selected

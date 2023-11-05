@@ -11,7 +11,7 @@ import Foundation
 import Vapor
 
 extension BrickLayers : Content {}
-extension BrickLayers : Authenticatable {}
+// extension BrickLayers : @unchecked Sendable, Authenticatable {}
 extension BrickLayers : AsyncResponseEncodable {}
 
 #endif // #if VAPOR

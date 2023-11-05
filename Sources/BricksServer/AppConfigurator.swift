@@ -105,7 +105,7 @@ class AppConfigurator {
         }
         
         // Find migrations from RRabac:
-        return rrabac.allRRabacMigrations()
+        return rrabac.allMigrations()
     }
     
     fileprivate func allDBMigrations( app: Application)->[Migration] {
@@ -347,6 +347,7 @@ class AppConfigurator {
         self.configAppErrorMiddleware()
         self.configRRabacMiddleware()
         self.configFileMiddleware() // Uncomment to serve files from /Public folder
+        self.ConfigSessionsMiddleware()
         
         // == Authentication middleware (for all routes, all the time) ==
         // DO NOT USE HERE! IS USED BY SPECIFIC ROUTING GROUPS! app.middleware.use(UserTokenAuthenticator())

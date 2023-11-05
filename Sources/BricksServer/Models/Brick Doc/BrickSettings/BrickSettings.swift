@@ -11,7 +11,7 @@ import Fluent
 import MNUtils
 
 final class BrickSettings : Codable, MNUIDable {
-    static let mnuidStr: String = "BRK_SET"
+    static let mnuidTypeStr: String = "BRK_SET"
     
     var drawingSnapToGrid : Bool = true
     var drawingGridSize : CGFloat = 10.0

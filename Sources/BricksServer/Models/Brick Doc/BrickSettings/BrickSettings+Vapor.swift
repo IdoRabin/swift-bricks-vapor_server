@@ -10,7 +10,7 @@ import Foundation
 import Vapor
 
 extension BrickSettings : Content {}
-extension BrickSettings : Authenticatable {}
+// extension BrickSettings : @unchecked Sendable, Authenticatable {}
 extension BrickSettings : AsyncResponseEncodable {}
 
 #endif // #if VAPOR

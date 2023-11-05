@@ -21,7 +21,7 @@ extension UserController /* +Prefill */ {
 
     func prefillAdminUsersData(db:Database, user prefillUser:AppUser? = nil) async throws {
         
-        dlog?.verbose("prefillAdminUsersData(app:user?:)")
+        dlog?.verbose("prefillAdminUsersData(app:user:\(prefillUser?.displayName ?? "<nil>" )")
         
         // MNUserPIIConfig
         let adminDomain         = AppServer.DEFAULT_DOMAIN

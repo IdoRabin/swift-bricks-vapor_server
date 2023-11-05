@@ -15,11 +15,12 @@ import NIO
 import DSLogger
 import MNUtils
 import MNVaporUtils
+import MNSettings
 import RRabac
 
 // TODO: Learn more regarding DocC - the apple Documentation Compiler for rich documentation.
 
-fileprivate let dlog : DSLogger? = DLog.forClass("App")
+fileprivate let dlog : DSLogger? = DLog.forClass("AppServer")?.setting(verbose: false)
 
 enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIterable {
     
@@ -58,7 +59,7 @@ enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIte
 weak var globalVaporApplication : Application? = nil
 
 // Wrapper for Vapor Application (cannot subclass or extend since it is final)
-class AppServer : LifecycleHandler {
+class AppServer : @unchecked Sendable, LifecycleHandler {
     
     static let INITIAL_DB_NAME : String = "?"
     static var DEFAULT_DOMAIN : String = "com.\(AppConstants.APP_NAME.snakeCaseToCamelCase())"
@@ -68,7 +69,7 @@ class AppServer : LifecycleHandler {
     
     // UserMgr.shared.db = app.db // set weak db in UserMgr
     // MARK: members
-    weak var settings = AppSettings.shared
+    var settings : AppSettings
     weak var vaporApplication : Application? = nil
     // weak var permissions : AppPermissionMiddleware? = nil
     weak var users : UserController? = nil
@@ -94,7 +95,7 @@ class AppServer : LifecycleHandler {
     // READ-ONLY! increment should be made to settings?.stats.launchCount
     var launchCount : Int {
         get {
-            let result = 0xffffff //self.settings?.stats.launchCount ?? 1
+            let result = self.settings.stats.launchCount
             return result
         }
     }
@@ -103,7 +104,7 @@ class AppServer : LifecycleHandler {
     var launchCountHexString : String {
         get {
             // Foundation:
-            return self.launchCount.toHex(uppercase: false)
+            return self.launchCount.toHex(prefix0x: true)
         }
     }
     
@@ -128,7 +129,8 @@ class AppServer : LifecycleHandler {
     // MARK: Singleton
     func initRouteMgrIfNeeded() {
         if self._routes == nil, let vapp = self.vaporApplication {
-            routes = MNRoutes(app: vapp)
+            // #$% two 2
+            routes = MNRoutes(app: vapp, context:"AppServer.initRouteMgrIfNeeded")
             if globalMNRouteMgr == nil {
                 globalMNRouteMgr = routes
             }
@@ -145,16 +147,26 @@ class AppServer : LifecycleHandler {
     
     public static let shared = AppServer()
     private init() {
+        AppSettings.IS_SHOULD_LOAD_DEFAULT_STD_SETTINGS = false // Adv. settings to save loading time for unused settings instance
+        AppSettings.IS_SHOULD_USE_OTHER_CATEGORY_FOR_ORPHANS = true
+        AppSettings.IMPLICIT_SETTINGS_NAME = "AppSettings"
+        
         MNUTILS_DEFAULT_APP_NAME = "Bricks Server"
         
         // TODO: Check if IS_DEBUG should be an @inlinable var ?
         MNUtils.debug.IS_DEBUG = Debug.IS_DEBUG
         Self.isInitializing = true
-        _ = AppSettings.shared // trigger init
+        settings = AppSettings(named:"AppSettings", persistors: [MNUserDefaultsPersistor()]) // , MNLocalJSONPersistor()
         isBooting = true
         self.initRouteMgrIfNeeded()
         // Rabac.shared.setupIfNeeded()
         Self.isInitializing = false
+        
+        /*
+        MNExec.exec(afterDelay: 1.4) {
+            self.settings.debugLogAll()
+            MNSettings.standard.debugLogAll()
+        }*/
     }
     
     var isDBConfigured : Bool {
@@ -192,8 +204,40 @@ class AppServer : LifecycleHandler {
     // MARK: LifecycleHandler
     func willBoot(_ application: Vapor.Application) throws {
         // TODO: try self.permissions?.willBoot(application)
-        dlog?.info("> Vapor app will Boot Nr.# \(self.launchCountHexString) vaporApp: <\(self.vaporApplication.descOrNil) \(String(memoryAddressOfOrNil: self.vaporApplication))>")
+        let memStr = MemoryAddress(ofOptional: self.vaporApplication)?.description ?? "<nil>"
+        dlog?.info("> Vapor app will Boot vaporApp: <\(self.vaporApplication.descOrNil) \(memStr)>")
         self.initRouteMgrIfNeeded()
+    }
+    
+    private func waitForSubsystemsToBoot() {
+        let name = Bundle.main.bundleName ?? "BServer"
+        let key = "\(name).waitForSubsystemsToBoot"
+        let logPrefix = (dlog != nil) ? "[\(name)].waitForSubsystemsToBoot" : "?"
+        guard !MNExec.isMain else {
+            dlog?.note("\(logPrefix) cannot wait on mainThread!")
+            return
+        }
+        
+        let waitLock = MNThreadWaitLock()
+        
+        MNExec.waitFor(key, test: {
+            // Tests:
+            self.settings.bootState == .running
+        }, interval: 0.2, timeout: 5.0) { waitResult in
+            switch waitResult {
+            case .success:
+                dlog?.verbose(log:.success, "\(logPrefix) success!")
+                waitLock.signal()
+            case .timeout:
+                dlog?.note(" has timed out!")
+                preconditionFailure("\(logPrefix) has timed out!")
+            case .canceled:
+                dlog?.note("\(logPrefix) was canceled!")
+                waitLock.signal()
+            }
+        }
+        
+        waitLock.waitForSignal()
     }
     
     func didBoot(_ app: Vapor.Application) throws {
@@ -202,8 +246,8 @@ class AppServer : LifecycleHandler {
         // Boot and make sure to Register app routes:
         let userContoller = UserController(app:app)
         try AppServer.shared.routes.bootRoutes(app, controllers: [
-            //DashboardController(),
             userContoller,
+            DashboardController(app: app),
             UtilController(app: app),
         ])
         self.users = userContoller
@@ -222,15 +266,20 @@ class AppServer : LifecycleHandler {
         }ÅÅÅÅ
         */
         
+        // Wait for more required subsystems to boot:
+        self.waitForSubsystemsToBoot()
+        
         // Change stats on launch
-        /*
-        settings?.blockChanges(block: { settings in
-            settings.stats.launchCount = self.launchCount
-            settings.stats.lastLaunchDate = Date();
-        })*/
+        try settings.bulkChanges(block: {settings in
+            // TODO: change settings.bulkChanges and settings.asyncBulkChanges to complete with the correct Self.type of the settings.
+            if let settings = settings as? AppSettings {
+                dlog?.verbose("settings.bulkChanges name: [\(settings.name)] state: \(settings.bootState)")
+                settings.stats.launchCount += 1
+                settings.stats.lastLaunchDate = Date();
+            }
+        })
         
         isBooting = false
-        
         dlog?.success("Vapor app did Boot: [\(Bundle.main.bundleName ?? "BServer") v\(Bundle.main.fullVersion) ] run Nr.#\(self.launchCountHexString) -[\(self.environment)]-")
          
         // NOTE: Call secureRoutesAfterBoot only after changing the isBooting flag to false:

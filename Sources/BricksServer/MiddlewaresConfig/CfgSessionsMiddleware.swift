@@ -13,6 +13,10 @@ fileprivate let dlog : DSLogger? = DLog.forClass("CfgSessionsMiddleware")?.setti
 
 extension AppConfigurator {
     func ConfigSessionsMiddleware() {
+        guard Vapor.Request.appHasSessionMiddleware else {
+            dlog?.note("failed: Vapor.Request.appHasSessionMiddleware is false!")
+            return
+        }
         guard let app = AppServer.shared.vaporApplication else {
             dlog?.note("failed: vapor app not found!")
             return
@@ -33,8 +37,10 @@ extension AppConfigurator {
     }
     
     // Creates the `cookies to follow the user along a single session:
-    fileprivate func sessionCookieFactory(_ sessionID:SessionID)->HTTPCookies.Value {
+    @Sendable
+    fileprivate func sessionCookieFactory (_ sessionID:SessionID) -> HTTPCookies.Value {
         // note: see also ...configuration.cookieName ..
+        // TODO: Check if @Sendable requise NOT using self.init
         return .init(string: sessionID.string, isSecure: true)
     }
 }

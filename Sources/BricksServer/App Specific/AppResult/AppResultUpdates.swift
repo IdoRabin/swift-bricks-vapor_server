@@ -15,11 +15,11 @@ extension AppResultUpdated {
         return AppResultUpdated.failure(AppError(error: fromError))
     }
     
-    static func failure<Success:Any>(code appErrorCode:AppErrorCode, reason:String? = nil)->AppResultUpdated<Success> {
+    static func failure(code appErrorCode:AppErrorCode, reason:String? = nil)->AppResultUpdated<Success> {
         return AppResultUpdated.failure(AppError(code:appErrorCode, reason: reason))
     }
     
-    static func failure<Success:Any>(code appErrorCode:AppErrorCode, reasons:[String]? = nil)->AppResultUpdated<Success> {
+    static func failure(code appErrorCode:AppErrorCode, reasons:[String]? = nil)->AppResultUpdated<Success> {
         return AppResultUpdated.failure(AppError(code:appErrorCode, reasons: reasons))
     }
 }

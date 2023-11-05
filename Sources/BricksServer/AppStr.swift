@@ -580,10 +580,10 @@ fileprivate class AppStringsTodoList : NSObject { // AppDelegateObserver ?
         // .documentDirectory -- accessible to user by Files app
         
         #if DEBUG
-        guard var documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return false}
+        guard var documentUrl = FileManager.implicit.urls(for: .documentDirectory, in: .userDomainMask).first else { return false}
         documentUrl.appendPathComponent("Debug")
         documentUrl.appendPathComponent("todoTranslate.dictionaty")
-        if FileManager.default.fileExists(atPath: documentUrl.path) {
+        if FileManager.implicit.fileExists(atPath: documentUrl.path) {
             var result = false
             cacheLock.lock {
                 do {
@@ -611,13 +611,13 @@ fileprivate class AppStringsTodoList : NSObject { // AppDelegateObserver ?
         // .libraryDirectory -- not accessible to user by Files app
         // .cachesDirectory -- not accessible to user by Files app, for caches and temps
         // .documentDirectory -- accessible to user by Files app
-        guard var documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return false}
+        guard var documentUrl = FileManager.implicit.urls(for: .documentDirectory, in: .userDomainMask).first else { return false}
         documentUrl.appendPathComponent("Debug")
         var result : Bool = false
         cacheLock.lock {
             do {
-                if !FileManager.default.fileExists(atPath: documentUrl.path) {
-                    try FileManager.default.createDirectory(atPath: documentUrl.path, withIntermediateDirectories: false, attributes: nil)
+                if !FileManager.implicit.fileExists(atPath: documentUrl.path) {
+                    try FileManager.implicit.createDirectory(atPath: documentUrl.path, withIntermediateDirectories: false, attributes: nil)
                 }
                 
                 documentUrl.appendPathComponent("todoTranslate.dictionaty")

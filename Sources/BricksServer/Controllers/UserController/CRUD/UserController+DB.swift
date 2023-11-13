@@ -17,21 +17,23 @@ extension UserController /* DB */ {
     // MARK: Users pii table
     
     // MARK: Users login info table
-    func dbFindUserLogins(db:Database, pii:MNPII, acceptedPIITypes : [MNUserPIIType] = MNUserPIIType.allCases, permissionGiver:AppPermissionGiver) async throws -> [MNUserLoginInfo] {
+    func dbFindUserLoginInfos(db:Database, pii:MNPIIInfo, acceptedPIITypes : [MNUserPIIType] = MNUserPIIType.allCases, permissionGiver:AppPermissionGiver) async throws -> [MNUserLoginInfo] {
         
         // TODO: Use Join
         
         // Find piis
+        // ~=
+        // ~~
         let userPIIs = try await MNUserPII.query(on: db)
-            .filter(\.$piiString ~~ pii.strValue)
-            .filter(\.$piiDomain ~~ pii.domain)
-            // is this required? .filter(\.$piiType == piiConfig.piiType) ??
+            .filter(\.$piiString, .caseInsensitve, pii.strValue)
+            .filter(\.$piiDomain, .caseInsensitve, pii.domain)
+            // TODO: is this required? .filter(\.$piiType == piiConfig.piiType) ??
             .filter(\.$piiType ~~ /* in */ acceptedPIITypes)
             .with(\.$loginInfo) // load loginInfo parent
             .top(50) // for mem safety JIC
         
         guard userPIIs.count > 0 else {
-            dlog?.verbose(log:.fail, "dbFindUserLogin failed finding username pii value: [\(pii.strValue)] at domain: [\(pii.domain)]")
+            dlog?.verbose(log:.fail, "dbFindUserLoginInfos failed finding username pii value: [\(pii.strValue)] at domain: [\(pii.domain)]")
             return []
             // DO NOT: throw MNError(code: .user_login_failed_user_name, reason: "User does not exist or blocked.")
         }
@@ -52,18 +54,20 @@ extension UserController /* DB */ {
         
         // JIC
         guard userPIIs.count == loginInfos.count else {
-            throw MNError(code: .user_login_failed_password, reason: "User login infos needs decoupling. Requires support.")
+            throw MNError(code: .user_login_failed_password, reason: "User login infos has some dicreprencies. Please request support.")
         }
         
         return loginInfos
     }
     
     func dbFindUserLogins(db:Database, domain:String, accessToken:String, permissionGiver:AppPermissionGiver) async throws -> [MNUserLoginInfo] {
-        // Get userId in token
+        // Get userId by accessToken
         
-        // find user/s for id
+        // find user for id
         
-        throw MNError(code: .db_failed_init, reason: "Failed dbFindUserLogins(accessToken). TODO: Implement")
+        // get login infos for this user
+        
+        throw MNError(code: .db_failed_init, reason: "Failed dbFindUserLoginInfos(accessToken). TODO: Implement")
     }
     
     // MARK: Users table
@@ -79,7 +83,7 @@ extension UserController /* DB */ {
         return aPersonInfo
     }
     
-    private func dbCreateUserLoginInfo(db:Database, user:AppUser, pii:MNPII, permissionGiver:AppPermissionGiver) async throws -> MNUserLoginInfo {
+    private func dbCreateUserLoginInfo(db:Database, user:AppUser, pii:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> MNUserLoginInfo {
         
         let aLoginInfo = MNUserLoginInfo(user: user,
                                          pii: pii)
@@ -93,7 +97,7 @@ extension UserController /* DB */ {
         return aLoginInfo
     }
     
-    func dbCreateUser(db:Database, displayName:String, pii:MNPII, personInfo:MNPersonInfo? = nil, userSetup:((AppUser) -> Void)? = nil, permissionGiver:AppPermissionGiver) async throws -> AppUser {
+    func dbCreateUser(db:Database, displayName:String, pii:MNPIIInfo, personInfo:MNPersonInfo? = nil, userSetup:((AppUser) -> Void)? = nil, permissionGiver:AppPermissionGiver) async throws -> AppUser {
         // NOTE: piiString is usually a username in its various types (email, name, personnel number etc)
         var newUser : AppUser? = nil
         var permission : MNPermission<String, MNError> = .allowed("dbCreateUser")
@@ -102,7 +106,7 @@ extension UserController /* DB */ {
         try permission.throwIfForbidden()
         
         // Only one user login found:
-        let loginInfos = try await dbFindUserLogins(db: db, pii: pii, permissionGiver: permissionGiver)
+        let loginInfos = try await dbFindUserLoginInfos(db: db, pii: pii, permissionGiver: permissionGiver)
         switch loginInfos.count {
         case 0:
             permission = .allowed("dbCreateUser")
@@ -119,10 +123,11 @@ extension UserController /* DB */ {
                 try await newUser!.save(on: db)
                 
                 let aLoginInfo = try await dbCreateUserLoginInfo(db: db, user: newUser!, pii: pii, permissionGiver: permissionGiver)
-                try await aLoginInfo.save(on: db)
-                
                 let loginInfoChildren = aLoginInfo.createChildren(user: newUser!, pii: pii)
-                try await loginInfoChildren.loginPii?.save(on: db)
+                
+                // NOTE: Order of save matters:
+                try await aLoginInfo.save(on: db)
+                try await loginInfoChildren.userPii?.save(on: db)
                 try await loginInfoChildren.accessToken?.save(on: db)
                 
                 // Person Info:
@@ -143,35 +148,34 @@ extension UserController /* DB */ {
     }
     
     // Read
-    func dbGetFullUserInfo(db:Database, userId:UUIDv5, permissionGiver:AppPermissionGiver) async throws -> MNPersonInfo {
-        throw MNError(code: .db_failed_init, reason: "dbGetFullUserInfo Failed. TODO: Implement")
+    // [1]
+    func dbGetUserPersonInfo(db:Database, userId:UUIDv5, permissionGiver:AppPermissionGiver) async throws -> MNPersonInfo {
+        throw MNError(code: .db_failed_init, reason: "dbGetUserPersonInfo Failed. TODO: Implement")
     }
     
     func dbFindUsers(db:Database, ids: [UUID], permissionGiver:AppPermissionGiver) async throws -> [AppUser]  {
         try await AppUser.query(on: db).filter(\.$id ~~ ids).top(ids.count)
     }
     
-    func dbFindUsers(db:Database, pii:MNPII, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
-        let infos = try await self.dbFindUserLogins(db: db, pii: pii, permissionGiver: permissionGiver)
+    func dbFindUsers(db:Database, pii:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
         
-        // Force load users from the info if needed
-        let users = infos.compactMap { $0.user }
+        // Find user login infos:
+        let infos = try await self.dbFindUserLoginInfos(db: db, pii: pii, permissionGiver: permissionGiver)
         
-        for user in users {
-            dlog?.info(">>>> Found user: \(user.description)")
+        // Force load users from their table from the infos (if needed)
+        let userIds = infos.compactMap { $0.$user.id } // TODO: Why usera are not loaded with the dollar sign?
+        let result = try await self.dbFindUsers(db: db, ids: userIds, permissionGiver: permissionGiver)
+        dlog?.info(">> dbFindUsers found \(result.count) users.")
+        
+        guard result.count > 0 else {
+            dlog?.note("0 Users found for PII:\(pii.description)")
+            throw AppError(code:.user_login_failed_user_not_found, reason: "dbFindUser: 0 users found for person identifying info.")
         }
         
-        // TODO: Force-load users manually if needed
-        
-        guard users.count > 0 else {
-            dlog?.warning("TODO: Implement dbFindUsers last part!")
-            throw MNError(code:.user_login_failed_user_not_found, reason: "dbFindUser: 0 users found for pii")
-        }
-        
-        throw MNError(code: .db_failed_init, reason: "Failed dbFindUsers(piiValue:piiHashedPwd). TODO: Implement")
+        return result
     }
     
-    func dbFindUsers(db:Database, domain:String, accessToken:String, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
+    func dbFindUsers(db:Database, domain:String, accessToken:String, permissionGiver:AppPermissionGiver) async throws -> ([AppUser]) {
         let userLoginInfos = try await self.dbFindUserLogins(db: db, domain:domain, accessToken: accessToken, permissionGiver: permissionGiver)
         
         // TODO: Force-load users manually if needed
@@ -179,8 +183,7 @@ extension UserController /* DB */ {
         for loginInfo in userLoginInfos {
             if loginInfo.$user.id == nil {
                 let msg = "Failed dbFindUsers(accessToken:..) login info does not point to a user."
-                
-                // throw MNError(code: .db_failed_query, reason: msg)
+                throw MNError(code: .db_failed_query, reason: msg)
             }
         }
         

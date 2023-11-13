@@ -1,5 +1,4 @@
 // master.js
-
 // MARK: Find elements
 function findBestElementForFlashing(element) {
     

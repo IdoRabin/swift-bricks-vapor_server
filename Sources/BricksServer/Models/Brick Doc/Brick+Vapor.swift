@@ -13,6 +13,7 @@ import Fluent
 import FluentKit
 import DSLogger
 import MNUtils
+import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("Brick")
 

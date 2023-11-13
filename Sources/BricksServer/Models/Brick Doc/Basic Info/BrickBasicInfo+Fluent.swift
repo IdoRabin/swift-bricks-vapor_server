@@ -49,8 +49,8 @@ extension BrickBasicInfo : Migration {
     
     func revert(on database: Database) -> EventLoopFuture<Void> {
         database.schema(Self.schema).delete().flatMap {
-            return database.enum(BrickTemplateType.dbName).delete().flatMap {
-                return database.enum(BrickVersionControlType.dbName).delete()
+            return database.enum(BrickTemplateType.dbEnumName).delete().flatMap {
+                return database.enum(BrickVersionControlType.dbEnumName).delete()
             }
         }
     }

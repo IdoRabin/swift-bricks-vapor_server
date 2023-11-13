@@ -4,7 +4,7 @@
             <ul class="nav col-12 col-lg-auto me-lg-auto justify-content-center mb-md-0">
                 <li class="align-items-center">
                     <a href="/dashboard">
-                        <img src="/images/app_icon_256.png" class="rounded float-start" alt="Bricks logo" style="width:42px;height:42px;">
+                        <img src="/images/app_icon/app_icon_256.png" class="rounded float-start" alt="Bricks logo" style="width:42px;height:42px;">
                     </a>
                     <li><a href="/dashboard" class="nav-link px-2 text-white">Bricks Dashboard</a></li>
                 </li>

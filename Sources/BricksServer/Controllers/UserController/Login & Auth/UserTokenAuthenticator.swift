@@ -40,6 +40,7 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         }
         
         let user = try await self.checkRecievedTokenAndGetUser(bearer: bearer, for: req)
+        dlog?.todo(" [AUT] authenticate(barer:for:request) TODO Reimplement!")
         
 //        case .success(let user):
 //            dlog?.info(" [AUT]     WILL checkUserAndValidateSavedToken")

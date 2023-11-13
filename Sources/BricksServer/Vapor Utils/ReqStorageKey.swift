@@ -12,6 +12,7 @@ import MNUtils
 fileprivate let dlog : DSLogger? = DLog.forClass("ReqStorageKey")
 
 // MARK: Protocol ReqStorageKey
+/*
 protocol ReqStorageKey : StorageKey {
     static var asString: String { get }
 }
@@ -54,8 +55,9 @@ struct ErrorRequestIDStorageKey : ReqStorageKey {
 struct ErrorOriginatingPathStorageKey : ReqStorageKey {
     typealias Value = String
 }
-
+*/
 // MARK: class behaving similar to an enum of all ReqStorageKeys:
+/*
 class ReqStorageKeys {
     // Equivalents of RouteInfoCodingKeys:
     static let user = UserStorageKey.self
@@ -96,3 +98,4 @@ class ReqStorageKeys {
         ReqStorageKeys.userTokenMakeIfMissing,
     ]
 }
+*/

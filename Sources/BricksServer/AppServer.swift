@@ -56,7 +56,9 @@ enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIte
     }
 }
 
+// Yuck!
 weak var globalVaporApplication : Application? = nil
+weak var globalAppServer : AppServer? = nil
 
 // Wrapper for Vapor Application (cannot subclass or extend since it is final)
 class AppServer : @unchecked Sendable, LifecycleHandler {
@@ -89,7 +91,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
     var dbName : String = AppServer.INITIAL_DB_NAME
     var isBooting : Bool = false
     var isDBLoaded : Bool = false
-    
+    var defaultPersmissionGiver = AppServerDefaultPermissionGiver()
     static private (set) var isInitializing : Bool = true
     
     // READ-ONLY! increment should be made to settings?.stats.launchCount
@@ -281,7 +283,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         
         isBooting = false
         dlog?.success("Vapor app did Boot: [\(Bundle.main.bundleName ?? "BServer") v\(Bundle.main.fullVersion) ] run Nr.#\(self.launchCountHexString) -[\(self.environment)]-")
-         
+        
         // NOTE: Call secureRoutesAfterBoot only after changing the isBooting flag to false:
         self.routes.secureRoutesAfterBoot(app)
         
@@ -290,10 +292,15 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         //        Rabac.shared.didBoot()
         try self.permissions?.didBoot(application)
          */
+        
+        // Set global access.
+        globalAppServer = self
     }
     
     func shutdown(_ application: Vapor.Application) {
-        
+        // TODO: set self.settings.bootState = .shuttingDown
+        // TODO: set self.routes.bootStater.state = .shuttingDown
+    
         /* terminal:
             sudo lsof -i :8081
             >>> (see list of processes holding the port)

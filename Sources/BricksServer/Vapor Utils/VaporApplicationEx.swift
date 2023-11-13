@@ -21,6 +21,14 @@ fileprivate let MIN_REQUIRED_TABLE_NAMES = ["person_rank", "person", "company", 
 
 extension Vapor.Application /* Bricks */{
     
+    var defaultPersmissionGiver : AppPermissionGiver? {
+        return self.appServer?.defaultPersmissionGiver
+    }
+    
+    weak var appServer : AppServer? {
+        return globalAppServer
+    }
+    
     /// Will validate migration by checking that all tablenames returns the minimum table names needed to run.
     /// - Returns: void when success or an error when failed
     func validateMigration() throws->EventLoopFuture<MigrationResult> {

@@ -30,7 +30,7 @@ extension UserController /* +Prefill */ {
         let piiUserDisplayName  = AppServer.DEFAULT_ADMIN_DISPLAY_NAME
         
         // Config contains the above info:
-        let pii = MNPII(piiType: .name,
+        let pii = MNPIIInfo(piiType: .name,
                         strValue: piiUserName,
                         domain: adminDomain,
                         hashedPwd: piiUserPwdHashed)
@@ -46,7 +46,7 @@ extension UserController /* +Prefill */ {
                 user = try await AppServer.shared.users?.dbCreateUser(
                     db:db,
                     displayName: prefillUser?.displayName ?? piiUserDisplayName,
-                    pii: prefillUser?.loginInfos.first?.loginPII?.asPII(db:db) ?? pii,
+                    pii: prefillUser?.loginInfos.first?.userPII?.asPIIInfo(db:db) ?? pii,
                     userSetup: { usr in
                         // Change any other prop for user before save
                         usr.status = .active
@@ -71,4 +71,5 @@ extension UserController /* +Prefill */ {
             }
         }
     }
+    
 }

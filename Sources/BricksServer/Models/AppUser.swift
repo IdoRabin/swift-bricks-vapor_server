@@ -11,6 +11,10 @@ import MNVaporUtils // defines MNUser
 
 // aliased MNUser
 // MNUser+Vapor.swift requires @unchecked Sendable & Authenticatable by 
-extension AppUser  : @unchecked Sendable { // , Authenticatable
-    
+extension AppUser : @unchecked Sendable { // , Authenticatable
+    // TODO: either implement as really sendable or find a way to circumvent this
+}
+
+extension AppUser : AppPermissionGiver {
+    // TODO: implement
 }

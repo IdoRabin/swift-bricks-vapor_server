@@ -111,67 +111,67 @@ const AppErrorCode = {
 		code : 400,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:400",
 	},
-	http_stt_unauthorized // 401 : {
+	http_stt_unauthorized:  { // 401
 		code : 401,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:401",
 	},
-	http_stt_paymentRequired  // 402 : {
+	http_stt_paymentRequired:  {   // 402
 		code : 402,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:402",
 	},
-	http_stt_forbidden         // 403 : {
+	http_stt_forbidden:  {          // 403
 		code : 403,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:403",
 	},
-	http_stt_notFound          // 404 : {
+	http_stt_notFound:  {           // 404
 		code : 404,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:404",
 	},
-	http_stt_methodNotAllowed    // 405 : {
+	http_stt_methodNotAllowed:  {     // 405
 		code : 405,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:405",
 	},
-	http_stt_notAcceptable        // 406 : {
+	http_stt_notAcceptable:  {         // 406
 		code : 406,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:406",
 	},
-	http_stt_proxyAuthenticationRequired // 407 : {
+	http_stt_proxyAuthenticationRequired:  {  // 407
 		code : 407,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:407",
 	},
-	http_stt_requestTimeout            // 408 : {
+	http_stt_requestTimeout:  {             // 408
 		code : 408,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:408",
 	},
-	http_stt_conflict              // 409 : {
+	http_stt_conflict:  {               // 409
 		code : 409,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:409",
 	},
-	http_stt_gone                  // 410 : {
+	http_stt_gone:  {                   // 410
 		code : 410,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:410",
 	},
-	http_stt_lengthRequired        // 411 : {
+	http_stt_lengthRequired:  {         // 411
 		code : 411,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:411",
 	},
-	http_stt_preconditionFailed    // 412 : {
+	http_stt_preconditionFailed:  {     // 412
 		code : 412,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:412",
 	},
-	http_stt_payloadTooLarge       // 413 : {
+	http_stt_payloadTooLarge:  {       // 413
 		code : 413,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:413",
 	},
-	http_stt_uriTooLong            // 414 : {
+	http_stt_uriTooLong:  {             // 414
 		code : 414,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:414",
 	},
-	http_stt_unsupportedMediaType  // 415 : {
+	http_stt_unsupportedMediaType:  {   //  : {
 		code : 415,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:415",
 	},
-	http_stt_rangeNotSatisfiable   // 416 : {
+	http_stt_rangeNotSatisfiable:  {    // 416 
 		code : 416,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:416",
 	},
@@ -549,6 +549,7 @@ const AppErrorCode = {
 		code : 3020,
 		reasonPhrase : "TODO - reason phrase for|stt_phrase|code:3020",
 	},
+	
     // case db_failed_fetch_by_ids = 3021
     // case db_failed_creating_fetch_request = 3022
     // case db_failed_update_request = 3030

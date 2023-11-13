@@ -1,6 +1,5 @@
 // Login.js
 
-
 // MARK: events
 const txtPwd = document.getElementById("password");
 const txtUsername = document.getElementById("username");
@@ -12,7 +11,7 @@ const STORAGE_REMEMBER_ME_KEY = "login/rememberme";
 const STORAGE_USERNAME_KEY    = "login/username";
 
 // Users may change this - Note that its also validated on server side.
-const minTextSze = 6;
+const minTextSze = 4;
 const maxTextSze = 64;
 
 // On loading
@@ -131,6 +130,13 @@ function updateControlsForMessages(usrname, pwdmsg, general) {
 
 function updateUIForMessage(code, msg) {
     let appError = getErrorByCode(code)
+
+    if (appError == null) {
+        updateControlsForMessages("", "", msg ?? AppErrorCode.undefined.reasonPhrase + " | " + code);
+    }
+
+    // updateControlsForMessages(usrname, pwdmsg, general)
+    console.log("|| code " + code + " message: " + msg)
     switch (appError.key) {
     case AppErrorCode.user_login_failed.code:
             updateControlsForMessages("", "", msg ?? appError.reasonPhrase);
@@ -180,7 +186,8 @@ const submitHandler = function(e) {
     
     if (isFormValid()) {
         // console.log("submitHandler", e.target.value);
-        
+        var isAllowBasicAuth = true
+
         // Diabele UI
         setUIEnabled(false);
         saveStateInStorage();
@@ -190,26 +197,32 @@ const submitHandler = function(e) {
             "username" : txtUsername.value,
             "password" : txtPwd.value,
             "remember_me" : chkRememberMe.checked
-        }
+        };
         
+        var headers = {
+            "Content-Type": "application/json",
+        }
+        if (isAllowBasicAuth) {
+            // A kind of basic auth flavor:
+            headers["Authorization"] = "Basic" + " " + btoa(data.username + ":" + data.password) // btoa(str) means toBase64(str)
+        }
+
         // Peform the login:
         // POST Url request: (no redirect)
         var statusCode = 200;
         fetch("login", {
         method: "POST", // or 'PUT'
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: headers,
         body: JSON.stringify(data),
         }).then((response) => {
             // console.log('parsed response', response.status)
             statusCode = response.status;
             return response.json();
         }).then(function(json) {
-            // console.log("json", json)
-            updateUIForMessage(statusCode, json["error_reason"])
+            console.log("json", json);
+            updateUIForMessage(statusCode, json["error_reason"]);
         }).catch((ex) => {
-            console.log('parsing JSON failed', ex)
+            console.log('parsing JSON failed', ex);
             setUIEnabled(true);
         });
     } else {

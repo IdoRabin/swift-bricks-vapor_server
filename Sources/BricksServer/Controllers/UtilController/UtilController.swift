@@ -21,7 +21,16 @@ fileprivate let dlog : DSLogger? = DLog.forClass("UtilController")
 
 class UtilController : AppRoutingController {
     
-    // MARK: Setup / Boot for routes:
+    // MARK: MNRoutingController overrides
+    // REQUIRED OVERRIDE for MNRoutingController
+    override var basePaths : [[RoutingKit.PathComponent]] {
+        // NOTE: var basePath is derived from basePaths.first
+        
+        // Each string should descrive a full path
+        return RoutingKit.PathComponent.arrays(fromPathStrings: ["util"])
+    }
+    
+    // MARK: Controller API:
     override func boot(routes: RoutesBuilder) throws {
         
         routes.group("util") { util in

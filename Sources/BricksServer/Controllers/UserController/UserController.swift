@@ -52,23 +52,8 @@ class UserController: AppRoutingController {
     
     @AppSettable(key:"UserController.accessTokenRecentlyRenewedTimeInterval", default: AppConstants.ACCESS_TOKEN_RECENT_TIMEINTERVAL_THRESHOLD) static var accessTokenRecentlyRenewedTimeInterval : TimeInterval
     @AppSettable(key:"UserController.accessTokenExpirationDuration", default: AppConstants.ACCESS_TOKEN_EXPIRATION_DURATION) static var accessTokenExpirationDuration : TimeInterval
-    let basePath = RoutingKit.PathComponent(stringLiteral: "user")
     
-    struct BearerToken : Codable {
-        let token : String
-        let expirationDate : Date
-        let createdDate : Date
-
-        init(token newToken:String, expiration:Date? = nil) {
-            token = newToken
-            createdDate = Date()
-            expirationDate = expiration ?? createdDate.addingTimeInterval(UserController.accessTokenExpirationDuration)
-        }
-
-        var isNewlyRenewed : Bool {
-            return abs(createdDate.timeIntervalSinceNow) < UserController.accessTokenRecentlyRenewedTimeInterval
-        }
-    }
+    // let basePath = RoutingKit.PathComponent(stringLiteral: "user")
     
     struct UserLogoutResponse : AppEncodableVaporResponse {
         let user :AppUser
@@ -106,7 +91,14 @@ class UserController: AppRoutingController {
         return nil
     }
     
-    // MARK: Controller methods
+    // MARK: MNRoutingController overrides
+    // REQUIRED OVERRIDE for MNRoutingController
+    override var basePaths : [[RoutingKit.PathComponent]] {
+        // NOTE: var basePath is derived from basePaths.first
+        
+        // Each string should descrive a full path
+        return RoutingKit.PathComponent.arrays(fromPathStrings: ["user"])
+    }
     
     // MARK: Controller API:
     // Controller methods should always accept a Request and return something ResponseEncodable
@@ -117,25 +109,14 @@ class UserController: AppRoutingController {
         let groupName = basePath.description
         
         //  = = = = Login routing group  = = = =
-        // path: /{basePath}/login
-        // Requires user + password Authenticator:
-        let loginGroup : RoutesBuilder = routes.grouped(UserPasswordAuthenticator())
-        loginGroup.group(basePath) { loginRoutes in
-            // let groupInfo = AppRouteInfo(requiredAuth: .userPassword)
-            loginRoutes.on([.POST, .GET], pathComp("login"), use: login)?.setting(
-                productType: .apiResponse,
-                title: "login user",
-                description: "login as a user of the client app. The user password provided must match an existing user's credentials.",
-                requiredAuth:.userPassword,
-                group: groupName)
-        }
+        // See file: UserController+Login
         
         // = = = = User/s protected root commands = = = =
         routes.group(UserTokenAuthenticator(),
                      AppUser.guardMiddleware() // guards against unautorized users: assuming User implements Vapor.Authenticatable
         ) { rprotected in
             // "Create" does not require id because the user being crated has no id (YET):
-            rprotected.on([.POST], [basePath, pathComp("create")], use: createUser)?.setting(
+            rprotected.on([.POST], basePath.appending(strComp: "create"), use: createUser)?.setting(
                 productType: .apiResponse,
                 title: "create user",
                 description: "Create a new user of the client app. Requires user creation credentials and permissions. New user should not have an existing username. A uuid passed for the new user is ignored and the uuid is created by the server only.",
@@ -145,7 +126,7 @@ class UserController: AppRoutingController {
         
         // = = = = User/s protected routing group = = = =
         // Requires calling client to supplie a valid accessToken / bearerToken (?)
-        routes.group([basePath, pathComp(":id")]) { usersRoutes in
+        routes.group(basePath.appending(strComp: ":id")) { usersRoutes in
             
             // === No protetions / accesstoken not needed:
             usersRoutes.on([.GET], pathComp("isLoggedIn"), dict:noProtGroupInfo.asDict(), use: isLoggedInCheck)?.setting(
@@ -203,7 +184,7 @@ class UserController: AppRoutingController {
         
         // map "/me/" path (/user/me)
         // We need to redirect to a user/{id}/bla:
-        routes.group(basePath, pathComp("me"), .catchall) { userRoutes in
+        routes.group(basePath.appending(strComp: "me").appending(.catchall)) { userRoutes in
             let routes = userRoutes.redirects(methods: [.GET, .POST, .PATCH, .DELETE, .PUT, .OPTIONS]) { method, req in
                 if let uidStr : String = req.selfUserUUIDString, uidStr.count > 4 && uidStr.count < 48 {
                     let pathRemainder = req.url.path.components(separatedBy: "/me/").last ?? ""
@@ -228,8 +209,8 @@ class UserController: AppRoutingController {
             for route in routes {
                 dlog?.verbose("boot(routes:) /me/ alias route:\(route.fullPath) method: [\(route.method.string.uppercased())] route: \(route.mnRoute)")
                 route.setting(productType: .apiResponse,
-                              title: route.path.fullPath.asNormalizedPathOnly(),
-                              description: "UserController /me/ alias \(route.method)",
+                              title: "/me/ alias for: .." + route.path.fullPath.lastPathComponents(count: 2),
+                              description: "UserController /me/ alias for \(route.method) \(route.path.fullPath.asNormalizedPathOnly())",
                               group:groupName)
             }
         }

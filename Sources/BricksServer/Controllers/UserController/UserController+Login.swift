@@ -16,101 +16,6 @@ import FluentKit
 fileprivate let dlog : DSLogger? = DLog.forClass("UserController+Login")
 extension UserController {
     
-    // MARK: Reqauesr
-    fileprivate struct UserLoginRequest : Content, JSONSerializable { // todo: , UserLoginable
-        static let USER_DOMAIN_EMPTY = ""
-        static let USER_DOMAIN_DEFAULT = AppServer.DEFAULT_DOMAIN
-        
-        let username : String
-        let userPassword : String
-        fileprivate(set) var userDomain : String = Self.USER_DOMAIN_DEFAULT
-        fileprivate(set) var rememberMe : RememberMeType = .forgetMe
-        fileprivate(set) var usernameType: MNUserPIIType = .name
-        
-        enum CodingKeys: String, CodingKey, CaseIterable {
-            case username       = "username"
-            case userPassword   = "password"
-            case userDomain     = "domain"
-            case rememberMe    = "remember_me"
-            case usernameType   = "username_type"
-        }
-        
-        init(username:String, userPassword:String, userDomain: String? = nil, rememberMe:RememberMeType = .forgetMe, usernameType:MNUserPIIType? = nil) {
-            self.username = username
-            self.userPassword = userPassword
-            self.userDomain = userDomain ?? Self.USER_DOMAIN_EMPTY
-            self.rememberMe = rememberMe
-            if username.count > 0 {
-                self.usernameType = usernameType ?? MNUserPIIType.detect(string: username) ?? .name
-            } else {
-                self.usernameType = .name
-            }
-        }
-        
-        static var empty : UserLoginRequest {
-            return UserLoginRequest(username: "", userPassword: "", userDomain: Self.USER_DOMAIN_EMPTY)
-        }
-        
-        var isEmpty : Bool {
-            return username == "" && 
-                userPassword == "" &&
-                userDomain == Self.USER_DOMAIN_EMPTY
-        }
-        
-        func asPiiInfo() throws -> MNPIIInfo? {
-            
-            // TODO Sanitizae and guard Guard user name and pwd input guard username.count > MIN_USER
-            let hashedPwd = try UserPasswordAuthenticator.digestPwdPlainText(plainText: userPassword)
-            return MNPIIInfo(piiType: usernameType,
-                             strValue: username, // any str field for the username, may be email or any other unique user identifier that is not a scret, known to the user
-                             domain: userDomain,
-                             hashedPwd: hashedPwd)
-        }
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.username = try container.decode(String.self, forKey: .username)
-            self.userPassword = try container.decode(String.self, forKey: .userPassword)
-            let keys = container.allKeys
-            if keys.contains(.userDomain) {
-                self.userDomain = try container.decode(String.self, forKey: .userDomain)
-            } else {
-                self.userDomain = Self.USER_DOMAIN_EMPTY
-            }
-            
-            if keys.contains(.rememberMe) {
-                let strValue = try container.decode(String.self, forKey: .rememberMe)
-                if strValue.isAllDigits, let intVal = Int(strValue), let remVal = RememberMeType(intValue: intVal) {
-                    self.rememberMe = remVal
-                } else {
-                    switch strValue.lowercased() {
-                    case "true", "yes":
-                        self.rememberMe = .rememberMe
-                    case "false":
-                        fallthrough
-                    default:
-                        self.rememberMe = .forgetMe
-                    }
-                }
-            }
-            
-            if keys.contains(.usernameType) {
-                self.usernameType = try container.decode(MNUserPIIType.self, forKey: .usernameType)
-            } else {
-                self.usernameType = MNUserPIIType.detect(string: self.username) ?? .name
-            }
-        }
-    }
-    
-    // MARK: Resposne
-    struct UserLoginResponse : AppEncodableVaporResponse {
-        let user : AppUser
-        let bearerToken : BearerToken
-        var isNewlyRenewed : Bool {
-            return abs(bearerToken.createdDate.timeIntervalSinceNow) < UserController.accessTokenRecentlyRenewedTimeInterval
-        }
-    }
-    
     // MARK: fileprivate util functions
     fileprivate func getSelfUser(req: Request) async throws->AppUser? {
         try await UserTokenAuthenticator().authenticate(request: req)
@@ -121,18 +26,103 @@ extension UserController {
         return nil
     }
     
+    // MARK: Private
+    /// Things to do when login was successful
+    /// - Parameters:
+    ///   - req: request
+    ///   - user: user to log in
+    ///   - pii: piiInfo used for this login
+    ///   - loginInfo: MNUserLoginInfo for the piiInfo
+    private func execSuccessfulLogin(db:any Database, req: Vapor.Request?, user:AppUser, pii:MNUserPII) async throws {
+        
+        // Load if needed
+        if pii.$loginInfo.value == nil {
+            _ = try await pii.$loginInfo.get(on: db)
+        }
+        
+        let loginInfo = pii.loginInfo
+        
+        // Load if needed
+        if loginInfo.$accessToken.value == nil {
+            _ = try await loginInfo.$accessToken.get(on: db)
+        }
+        
+        // Create / Use existing accessToken:
+        var loginToken : MNAccessToken? = loginInfo.accessToken
+        if let at = loginInfo.accessToken {
+            loginToken = at
+        } else {
+            // Test all available accessTokens for loginInfo compatibility
+            for token in user.validAccessTokens {
+                // Load if needed
+                if token.$loginInfo.value == nil {
+                    _ = try await token.$loginInfo.get(on: db)
+                }
+                
+                dlog?.info("LOGIN   token.userUIDString \(token.userUIDString.descOrNil) ==? USR \(user.id?.uuidString ?? "<nil>")")
+                if token.userUIDString != user.id?.uuidString {
+                    continue
+                }
+                
+                dlog?.info("LOGIN   token.userUIDString \(token.userUIDString.descOrNil) ==? PII \(pii.userId?.uuidString ?? "<nil>")")
+                if token.userUIDString != pii.userId?.uuidString {
+                    continue
+                }
+                
+                dlog?.info("LOGIN   token.loginInfo \(token.loginInfo?.id?.uuidString ?? "<nil>") ==? \(pii.loginInfo.id.descOrNil)")
+                if token.loginInfo?.id != pii.loginInfo.id {
+                    continue
+                }
+                
+                loginToken = token
+                break
+            }
+        }
+        if loginToken == nil {
+            // Create new access token
+            let newToken = MNAccessToken(loginInfo: loginInfo)
+            loginInfo.accessToken = newToken
+            // ? Should we? user.loginInfos.append(loginInfo)
+            DLog.note("LOGIN    New access token created: \(newToken) (none found)!")
+            loginToken = newToken
+        }
+        
+        dlog?.info("LOGIN found token: \(loginToken.descOrNil)")
+        
+        // Save lastUsed dates etc
+        let now = Date.now
+        loginToken?.lastUsedDate = now // Should we mark this as a login using this accessToken?
+        loginInfo.latestLoginDate = now
+        
+        loginInfo.isLoggedIn = true
+        
+        // Save to request / session:
+        if let req = req {
+            // DO NOT: req .auth .login(user)  - this is to be called in the various authenitation Middlewares.
+            req.saveToReqStore(key: ReqStorageKeys.selfUser, value: user, alsoSaveToSession: true)
+            req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: user.id!.uuidString, alsoSaveToSession: true)
+            req.saveToReqStore(key: ReqStorageKeys.selfAccessToken, value: loginToken, alsoSaveToSession: true)
+        }
+        
+        // Save to db:
+        try await user.save(on: db)
+        try await loginInfo.save(on: db)
+        try await loginToken?.save(on: db)
+    }
+    
     // MARK: actual request/s
     /// Login a user to the system
     /// - Parameter req  login reuqest content
     /// - Returns: UserLoginResponse containing the User structure and the bearerToken
     func login(req: Request) async throws -> UserLoginResponse {
-
-        // https://stackoverflow.com/questions/3391242/should-i-hash-the-password-before-sending-it-to-the-server-side
-        // TL;DR: NO, the client should never hash the pwd!
-        // UserLoginRequest is validatable
-        guard let appServer = req.application.appServer, appServer.isBooting == false else {
-            throw AppError(code: .http_stt_expectationFailed, reason: "Server not online")
-        }
+        dlog?.info("login(req:) ------ ")
+        throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: bad credientials (unknown)")
+    }
+    
+    func XXlogin(req: Request) async throws -> UserLoginResponse {
+        throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: bad credientials (unknown)")
+        /*
+        
         
         // Get the user we are trying to login using the pii info:
         var loginReq = UserLoginRequest.empty
@@ -149,13 +139,13 @@ extension UserController {
             throw AppError(code: .user_login_failed_bad_credentials, reason: "Bad credientials: Domain access issue.")
         }
             
-        guard let pii = try loginReq.asPiiInfo() else {
+        guard let piiInfo = try loginReq.asPiiInfo() else {
             throw AppError(code: .user_login_failed_bad_credentials, reason: "Bad credientials: User identifying info not found.")
         }
         
         // Find user and permission:
         let permissionGiver : AppPermissionGiver = req.selfUser ?? appServer.defaultPersmissionGiver
-        let users = try await self.dbFindUsers(db: req.db, pii: pii, permissionGiver: permissionGiver)
+        let users = try await self.dbFindUsers(db: req.db, pii: piiInfo, permissionGiver: permissionGiver)
         guard let user = users.first else {
             throw AppError(code: .user_login_failed_user_not_found, reason: "User was not found")
         }
@@ -165,51 +155,50 @@ extension UserController {
 
         // Save pii and user info into req storage:
         req.saveToReqStore(key: ReqStorageKeys.user.self, value: user)
-        //req.saveToReqStore(key: ReqStorageKeys.loginInfos.self, value: loginInfos)
         let passAuthenticator = req.application.middleware.getMiddleware(ofType: UserPasswordAuthenticator.self) ?? UserPasswordAuthenticator()
-        let basicAuthorization = BasicAuthorization(username: pii.strValue, password: loginReq.userPassword)
+        let basicAuthorization = BasicAuthorization(username: piiInfo.strValue, password: loginReq.userPassword)
         
         // Authenticate using Vapor mechanisms:
         try await passAuthenticator.authenticate(basic: basicAuthorization, for: req)
+        // Success or authenticate threw a login error:
         
-        // TODO: Check if already logged in or logged in as other user:
+        /*
+            MNUser
+             - personInfo : MNPersonInfo? (as child)
+                - name : MNPersonName? (as field)
+             - loginInfos : [MNUserLoginInfo]  (as children)
+                - userPII : MNUserPII? (as child)
+                - accessToken : MNAccessToken? (as child)
+         */
+        guard let loginInfos : [MNUserLoginInfo] = req.getFromReqStore(key: ReqStorageKeys.loginInfos, getFromSessionIfNotFound: true), let loginInfo = loginInfos.first, let userPII = loginInfo.userPII else {
+            dlog?.warning("Login succeeded but no loginInfo was saved into reqStore or sessionStore!")
+            throw AppError(code: .user_login_failed_bad_credentials, reason: "User login info was not found")
+        }
+        
+        // Execute successfult login
+        // Check if already logged in or logged in as other user:
+        if loginInfo.isLoggedIn == true {
+            DLog.note("LOGIN    loginInfo user is already logged in!")
             // Return what ?
-            
-        // Authenticate user?
+        }
+        try await self.execSuccessfulLogin(db:req.db, req: req, user: user, pii: userPII)
         
+        // TODO: Create a login/logout history record:
         
-//        let selfUser = req.getSelfUser(isTryDeepQuery: true)
-//        let token = req.getAccessToken(context: "/user/login")
-//        
-//        if let selfUser = selfUser, let token = token, token.expirationDate.isInTheFuture {
-//            if selfUser.id != user.id {
-//                // Logout other usr from this session
-//                dlog?.warning("Logging out (from the sessin) the other user: \(selfUser.description)")
-//                req.saveToSessionStore(selfUser: user, selfAccessToken: token)
-//            } else {
-//                // Check if the existing self user only needs a new token (old token has expired?).
-//                if token.isExpired {
-//                    // Renew acces token / make new:
-//                    
-//                } else {
-//                    throw Abort(appErrorCode: .http_stt_alreadyReported,
-//                                reason: "User already logged in." +  Debug.StringOrEmpty("token expires on: \(token.expirationDate.formatted()))"))
-//                }
-//            }
-//        }
-//        
-//        // Login requst start:
-//        dlog?.info("login: \(loginReq)")
-        throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: bad credientials (unk)")
+        // TODO: Create a login/logout response:
+        // Assumed to be created in execSuccessfulLogin and saved into selfAccessToken.
+        let accessToken = (loginInfo.accessToken ?? req.getFromReqStore(key: ReqStorageKeys.selfAccessToken))!
+        let bearerTokenStr = accessToken.asBearerTokenString(forClient: true)
+        let response = UserLoginResponse(bearerToken: bearerTokenStr, isNewlyRenewed: accessToken.isNewlyRenewed)
+        return response
+        
+        //
+         */
     }
 }
 
 
-
-
 /*
-
- 
  if selfUser == nil {
      
      

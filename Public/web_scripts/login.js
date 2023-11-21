@@ -210,7 +210,7 @@ const submitHandler = function(e) {
         // Peform the login:
         // POST Url request: (no redirect)
         var statusCode = 200;
-        fetch("login", {
+        fetch("requestLogin", {
         method: "POST", // or 'PUT'
         headers: headers,
         body: JSON.stringify(data),

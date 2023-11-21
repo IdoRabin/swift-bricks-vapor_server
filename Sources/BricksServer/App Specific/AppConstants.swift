@@ -95,7 +95,7 @@ class Debug {
     static let IS_DEBUG = false // TODO: Check if IS_DEBUG should be an @inlinable var ?
     #endif
     
-    static let RESET_DB_ON_INIT = Debug.IS_DEBUG && true // Will wipe all db tables
+    static let RESET_DB_ON_INIT = Debug.IS_DEBUG && false // Will wipe all db tables
     static let RESET_SETTINGS_ON_INIT = Debug.IS_DEBUG && false
     
     static func StringOrNil(_ str:String)->String? {

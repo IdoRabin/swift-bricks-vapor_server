@@ -17,7 +17,7 @@ extension UserController /* DB */ {
     // MARK: Users pii table
     
     // MARK: Users login info table
-    func dbFindUserLoginInfos(db:Database, pii:MNPIIInfo, acceptedPIITypes : [MNUserPIIType] = MNUserPIIType.allCases, permissionGiver:AppPermissionGiver) async throws -> [MNUserLoginInfo] {
+    func dbFindUserLoginInfos(db:Database, piiInfo:MNPIIInfo, acceptedPIITypes : [MNUserPIIType] = MNUserPIIType.allCases, permissionGiver:AppPermissionGiver) async throws -> [MNUserLoginInfo] {
         
         // TODO: Use Join
         
@@ -25,15 +25,15 @@ extension UserController /* DB */ {
         // ~=
         // ~~
         let userPIIs = try await MNUserPII.query(on: db)
-            .filter(\.$piiString, .caseInsensitve, pii.strValue)
-            .filter(\.$piiDomain, .caseInsensitve, pii.domain)
+            .filter(\.$piiString, .caseInsensitve, piiInfo.strValue)
+            .filter(\.$piiDomain, .caseInsensitve, piiInfo.domain)
             // TODO: is this required? .filter(\.$piiType == piiConfig.piiType) ??
             .filter(\.$piiType ~~ /* in */ acceptedPIITypes)
             .with(\.$loginInfo) // load loginInfo parent
             .top(50) // for mem safety JIC
         
         guard userPIIs.count > 0 else {
-            dlog?.verbose(log:.fail, "dbFindUserLoginInfos failed finding username pii value: [\(pii.strValue)] at domain: [\(pii.domain)]")
+            dlog?.verbose(log:.fail, "dbFindUserLoginInfos failed finding username pii value: [\(piiInfo.strValue)] at domain: [\(piiInfo.domain)]")
             return []
             // DO NOT: throw MNError(code: .user_login_failed_user_name, reason: "User does not exist or blocked.")
         }
@@ -97,7 +97,7 @@ extension UserController /* DB */ {
         return aLoginInfo
     }
     
-    func dbCreateUser(db:Database, displayName:String, pii:MNPIIInfo, personInfo:MNPersonInfo? = nil, userSetup:((AppUser) -> Void)? = nil, permissionGiver:AppPermissionGiver) async throws -> AppUser {
+    func dbCreateUser(db:Database, displayName:String, piiInfo:MNPIIInfo, personInfo:MNPersonInfo? = nil, userSetup:((AppUser) -> Void)? = nil, permissionGiver:AppPermissionGiver) async throws -> AppUser {
         // NOTE: piiString is usually a username in its various types (email, name, personnel number etc)
         var newUser : AppUser? = nil
         var permission : MNPermission<String, MNError> = .allowed("dbCreateUser")
@@ -106,24 +106,24 @@ extension UserController /* DB */ {
         try permission.throwIfForbidden()
         
         // Only one user login found:
-        let loginInfos = try await dbFindUserLoginInfos(db: db, pii: pii, permissionGiver: permissionGiver)
+        let loginInfos = try await dbFindUserLoginInfos(db: db, piiInfo: piiInfo, permissionGiver: permissionGiver)
         switch loginInfos.count {
         case 0:
             permission = .allowed("dbCreateUser")
         case 1:
-            permission = .forbidden(MNError(code: .db_already_exists, reason: "A user with this \(pii.piiType.displayName) already exists."))
+            permission = .forbidden(MNError(code: .db_already_exists, reason: "A user with this \(piiInfo.piiType.displayName) already exists."))
         default:
             permission = .forbidden(MNError(code: .db_failed_creating, reason: "User login credentials require review. Support is required."))
         }
         try permission.throwIfForbidden()
         
         do {
-            newUser = try AppUser(displayName: displayName, pii: pii, setup: userSetup)
+            newUser = try AppUser(displayName: displayName, pii: piiInfo, setup: userSetup)
             try await db.transaction {[self, newUser] db in
                 try await newUser!.save(on: db)
                 
-                let aLoginInfo = try await dbCreateUserLoginInfo(db: db, user: newUser!, pii: pii, permissionGiver: permissionGiver)
-                let loginInfoChildren = aLoginInfo.createChildren(user: newUser!, pii: pii)
+                let aLoginInfo = try await dbCreateUserLoginInfo(db: db, user: newUser!, pii: piiInfo, permissionGiver: permissionGiver)
+                let loginInfoChildren = aLoginInfo.createChildren(user: newUser!, pii: piiInfo)
                 
                 // NOTE: Order of save matters:
                 try await aLoginInfo.save(on: db)
@@ -157,10 +157,10 @@ extension UserController /* DB */ {
         try await AppUser.query(on: db).filter(\.$id ~~ ids).top(ids.count)
     }
     
-    func dbFindUsers(db:Database, pii:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
+    func dbFindUsers(db:Database, piiInfo:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
         
         // Find user login infos:
-        let infos = try await self.dbFindUserLoginInfos(db: db, pii: pii, permissionGiver: permissionGiver)
+        let infos = try await self.dbFindUserLoginInfos(db: db, piiInfo: piiInfo, permissionGiver: permissionGiver)
         
         // Force load users from their table from the infos (if needed)
         let userIds = infos.compactMap { $0.$user.id } // TODO: Why usera are not loaded with the dollar sign?
@@ -168,7 +168,7 @@ extension UserController /* DB */ {
         dlog?.info(">> dbFindUsers found \(result.count) users.")
         
         guard result.count > 0 else {
-            dlog?.note("0 Users found for PII:\(pii.description)")
+            dlog?.note("0 Users found for PII:\(piiInfo.description)")
             throw AppError(code:.user_login_failed_user_not_found, reason: "dbFindUser: 0 users found for person identifying info.")
         }
         

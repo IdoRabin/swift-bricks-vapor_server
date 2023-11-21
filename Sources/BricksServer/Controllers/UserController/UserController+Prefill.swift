@@ -23,7 +23,7 @@ extension UserController /* +Prefill */ {
         
         dlog?.verbose("prefillAdminUsersData(app:user:\(prefillUser?.displayName ?? "<nil>" )")
         
-        // MNUserPIIConfig
+        // MNUserPII
         let adminDomain         = AppServer.DEFAULT_DOMAIN
         let piiUserName         = AppServer.DEFAULT_ADMIN_IIP_USERNAME
         let piiUserPwdHashed    = try UserPasswordAuthenticator.digestPwdPlainText(plainText: AppServer.DEFAULT_ADMIN_IIP_PWD)
@@ -46,7 +46,7 @@ extension UserController /* +Prefill */ {
                 user = try await AppServer.shared.users?.dbCreateUser(
                     db:db,
                     displayName: prefillUser?.displayName ?? piiUserDisplayName,
-                    pii: prefillUser?.loginInfos.first?.userPII?.asPIIInfo(db:db) ?? pii,
+                    piiInfo: prefillUser?.loginInfos.first?.userPII?.asPIIInfo(db:db) ?? pii,
                     userSetup: { usr in
                         // Change any other prop for user before save
                         usr.status = .active

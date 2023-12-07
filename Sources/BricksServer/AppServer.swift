@@ -19,7 +19,7 @@ import MNSettings
 import RRabac
 
 // TODO: Learn more regarding DocC - the apple Documentation Compiler for rich documentation.
-
+// TODO: CONSIDER USING Gatekeeper / Guardian – Rate limiting middleware for Vapor. (https://github.com/nodes-vapor/gatekeeper or https://github.com/Jinxiansen/Guardian)
 fileprivate let dlog : DSLogger? = DLog.forClass("AppServer")?.setting(verbose: false)
 
 enum AppServerEnvironment : Codable, Equatable, CustomStringConvertible, CaseIterable {
@@ -64,7 +64,7 @@ weak var globalAppServer : AppServer? = nil
 class AppServer : @unchecked Sendable, LifecycleHandler {
     
     static let INITIAL_DB_NAME : String = "?"
-    static var DEFAULT_DOMAIN : String = "com.\(AppConstants.APP_NAME.snakeCaseToCamelCase())"
+    static var DEFAULT_DOMAIN : String = MNDomains.DEFAULT_DOMAIN
     static var DEFAULT_ADMIN_DISPLAY_NAME : String = "admin" + String.ZWSP
     static var DEFAULT_ADMIN_IIP_USERNAME : String = "admin"
     static var DEFAULT_ADMIN_IIP_PWD : String = "12345678aA!"
@@ -75,10 +75,10 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
     weak var vaporApplication : Application? = nil
     // weak var permissions : AppPermissionMiddleware? = nil
     weak var users : UserController? = nil
-    private var _routes : MNRoutes? = nil // will have globalMNRouteMgr
-    public var routes : MNRoutes {
+    private var _routes : MNRoutingMgr? = nil
+    public var routes : MNRoutingMgr {
         get {
-            return _routes! // globalMNRouteMgr
+            return _routes!
         }
         set {
             if self._routes !== newValue {
@@ -132,7 +132,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
     func initRouteMgrIfNeeded() {
         if self._routes == nil, let vapp = self.vaporApplication {
             // #$% two 2
-            self._routes = MNRoutes(app: vapp, name:"RouteMgr" , context:"AppServer.initRouteMgrIfNeeded")
+            self._routes = MNRoutingMgr(app: vapp, manager: nil)
             if globalMNRouteMgr == nil {
                 globalMNRouteMgr = routes
             }
@@ -141,7 +141,9 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         }
         
         if let rrabacMiddleware = self.vaporApplication?.middleware(ofType: RRabacMiddleware.self) {
-            AppServer.shared.routes.bootStater.observers.add(observer: rrabacMiddleware)
+            // todo: reimplement boot stating observation for RRabacMiddleware
+            // AppServer.shared.routes.bootStater.observers.add(observer: rrabacMiddleware)
+            // dlog?.todo("reiplement init of rrabacMiddleware ֿ\(rrabacMiddleware)")
         } else {
             dlog?.verbose(log: .note, "initRouteMgrIfNeeded: RRabacMiddleware was not found!")
         }
@@ -211,6 +213,8 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         self.initRouteMgrIfNeeded()
     }
     
+    
+    /// Will await with a time loop and thread locks (MNExec.waitFor)
     private func waitForSubsystemsToBoot() {
         let name = Bundle.main.bundleName ?? "BServer"
         let key = "\(name).waitForSubsystemsToBoot"
@@ -246,11 +250,11 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         self.initRouteMgrIfNeeded()
         
         // Boot and make sure to Register app routes:
-        let userController = UserController(app:app) // for use ather the route booting
-        try AppServer.shared.routes.bootRoutes(app, controllers: [
+        let userController = UserController(app:app, manager: AppServer.shared.routes) // for use ather the route booting
+        try AppServer.shared.routes.bootRoutes(app:app, controllers: [
             userController,
-            DashboardController(app: app),
-            UtilController(app: app),
+            DashboardController(app: app, manager: AppServer.shared.routes),
+            UtilController(app: app, manager: AppServer.shared.routes),
         ])
         self.users = userController
         
@@ -269,7 +273,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         */
         
         // Wait for more required subsystems to boot:
-        self.waitForSubsystemsToBoot()
+        /* "awaits" using thread locks: */ self.waitForSubsystemsToBoot()
         
         // Change stats on launch
         try settings.bulkChanges(block: {settings in
@@ -285,7 +289,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         dlog?.success("Vapor app did Boot: [\(Bundle.main.bundleName ?? "BServer") v\(Bundle.main.fullVersion) ] run Nr.#\(self.launchCountHexString) -[\(self.environment)]-")
         
         // NOTE: Call secureRoutesAfterBoot only after changing the isBooting flag to false:
-        self.routes.secureRoutesAfterBoot(app)
+        // self.routes.secureRoutesAfterBoot(app)
         
         // TODO:
         /*

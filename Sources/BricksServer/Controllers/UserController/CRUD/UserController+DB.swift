@@ -22,8 +22,7 @@ extension UserController /* DB */ {
         // TODO: Use Join
         
         // Find piis
-        // ~=
-        // ~~
+        // Personal Identification Information for a user: the info needed to login (username, hashed password)
         let userPIIs = try await MNUserPII.query(on: db)
             .filter(\.$piiString, .caseInsensitve, piiInfo.strValue)
             .filter(\.$piiDomain, .caseInsensitve, piiInfo.domain)
@@ -83,7 +82,7 @@ extension UserController /* DB */ {
         return aPersonInfo
     }
     
-    private func dbCreateUserLoginInfo(db:Database, user:AppUser, pii:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> MNUserLoginInfo {
+    func dbCreateUserLoginInfo(db:Database, user:AppUser, pii:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> MNUserLoginInfo {
         
         let aLoginInfo = MNUserLoginInfo(user: user,
                                          pii: pii)
@@ -154,7 +153,11 @@ extension UserController /* DB */ {
     }
     
     func dbFindUsers(db:Database, ids: [UUID], permissionGiver:AppPermissionGiver) async throws -> [AppUser]  {
-        try await AppUser.query(on: db).filter(\.$id ~~ ids).top(ids.count)
+        guard ids.count > 0 else {
+            return []
+        }
+        
+        return try await AppUser.query(on: db).filter(\.$id ~~ ids).top(ids.count)
     }
     
     func dbFindUsers(db:Database, piiInfo:MNPIIInfo, permissionGiver:AppPermissionGiver) async throws -> [AppUser] {
@@ -165,7 +168,7 @@ extension UserController /* DB */ {
         // Force load users from their table from the infos (if needed)
         let userIds = infos.compactMap { $0.$user.id } // TODO: Why usera are not loaded with the dollar sign?
         let result = try await self.dbFindUsers(db: db, ids: userIds, permissionGiver: permissionGiver)
-        dlog?.info(">> dbFindUsers found \(result.count) users.")
+        dlog?.verbose("dbFindUsers found \(result.count) users.")
         
         guard result.count > 0 else {
             dlog?.note("0 Users found for PII:\(piiInfo.description)")

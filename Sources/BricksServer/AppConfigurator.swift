@@ -138,6 +138,7 @@ class AppConfigurator {
             let dbId = DatabaseID(string: dbName)
             app.migrations.add(migrations, to:dbId)
             
+            // MNUser().prepare(on:app.db)
             
             // Migration!
             dlog?.verbose(log:.info, "        📒 migrateDBInstance autoMigrate START\ntables: \(migrations.shortNames.descriptionJoined)")
@@ -213,7 +214,7 @@ class AppConfigurator {
         // This shows how to extract the password into Package.swift, omitting the hard-coded password/username inside the project.
         app.databases.use(.postgres(configuration: SQLPostgresConfiguration(
                 hostname: Environment.get("DATABASE_HOST") ?? "localhost",
-                port: Environment.get("DATABASE_PORT").flatMap(Int.init(_:)) ?? SQLPostgresConfiguration.ianaPortNumber,
+                port: Environment.get("DATABASE_PORT").flatMap(Int.init(_:)) ?? SQLPostgresConfiguration.ianaPortNumber /* iana port = 5432 */ ,
                 username: Environment.get("DATABASE_USERNAME") ?? "vapor",
                 password: Environment.get("DATABASE_PASSWORD") ?? "vapor",
                 database: Environment.get("DATABASE_NAME") ?? dbName,
@@ -394,33 +395,6 @@ class AppConfigurator {
                     cache.saveIfNeeded()
                 }
             }
-        }
-        
-        // Add debug user
-        do {
-            dlog?.info("configureDebugAddUserIfNeeded")
-            // init(username newUsername:String, userDomain:String, pwd newPwd:String, isShouldsanitize:Bool = false) throws {
-            let queryUser = try User(username: "idorabin", pwd: "123456")
-            var userIdStr = "[query id: \(queryUser.id.descOrNil)]"
-            let resultUser = try await UserMgr.shared.get(db: app.db, username: queryUser.username, selfUser: nil)
-            if let resultUser = resultUser {
-                if let id = resultUser.$id.value {
-                    userIdStr = id.uuidString
-                    dlog?.info("debugAddUserIfNeeded type \(type(of: id)) [\(id)]")
-                }
-                dlog?.success("debugAddUserIfNeeded single user already existed [\(resultUser.username)] id: \(userIdStr)")
-                debugSetMasterPermissionsIfNeeded(resultUser)
-            } else {
-                dlog?.info("debugAddUserIfNeeded will create single user [\(queryUser.username)] id: \(userIdStr)")
-                let createdUser = try await UserMgr.shared.createSingleUser(db: app.db, selfUser: nil, user: queryUser, sourceContext: "AppConfigurator.debugAddUserIfNeeded", during:nil)
-                dlog?.success("debugAddUserIfNeeded successfuly created single user [\(createdUser.username)] id: \(createdUser.$id.value.descOrNil)")
-                debugSetMasterPermissionsIfNeeded(createdUser)
-            }
-            
-            self.debugUserAdded = true
-            self.debugUserBeingAdded = false
-        } catch let error {
-            app.db.logger.notice("debugAddUserIfNeeded user creation failed: \(error.localizedDescription)")
         }
          */
     }

@@ -5,6 +5,10 @@ import Logging
 import DSLogger
 import MNUtils
 
+import NIO
+import CNIOAtomics
+import AsyncHTTPClient
+
 fileprivate let dlog : DSLogger? = DLog.forClass("Entrypoint")?.setting(verbose: false)
 
 /// This extension is temporary and can be removed once Vapor gets this support.

@@ -67,7 +67,8 @@ extension AppEncodableVaporResponse /* default implementation */ {
         response.headers.replaceOrAdd(name: "Access-Control-Allow-Methods", value: crossOriginAllowMethods.descriptions().joined(separator: ", "))
         
         if self.httpStatusOverride.code > 299 {
-            return req.eventLoop.makeFailedFuture(Abort(self.httpStatusOverride, reason: "Unknown http status issue"))
+            dlog?.note("httpStatusOverride for:\(req.url.string) has httpStatusOverride of a 'failure' status: \(self.httpStatusOverride.code)")
+            // TODO: Determine when this should be checked: return req.eventLoop.makeFailedFuture(Abort(self.httpStatusOverride, reason: "Unknown http status issue"))
         }
         
         do {
@@ -79,7 +80,7 @@ extension AppEncodableVaporResponse /* default implementation */ {
             
             if (IS_LOG_RESPONSE_DATA) {
                 let str = String(data:data, encoding: .utf8) ?? "?";
-                dlog?.success("encoded \(req.url.path.lastPathComponent()) response type: \(Self.self) -- body string: \(str)")
+                dlog?.success("encoded \(req.method.rawValue) \(req.url.path.lastPathComponent()) response : \(Self.self) \(response.status) BODY: \(str)")
             }
         } catch let error {
             dlog?.note("failed encoding \(self) error: \(error.localizedDescription)?")

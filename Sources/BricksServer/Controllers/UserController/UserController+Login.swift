@@ -35,7 +35,10 @@ extension UserController {
     ///   - loginInfo: MNUserLoginInfo for the piiInfo
     private func execSuccessfulLogin(db:any Database, req: Vapor.Request?, user:AppUser, pii:MNUserPII) async throws {
         
-        // Load if needed
+        // NOTE: the consumers of this method expect loggedInInfo.accessToken AND req.getFromReqStore(key: ReqStorageKeys.selfAccessToken)
+        // to be up-to date and relationally-linked correctly after this function is done
+        
+        // Load loginInfo if needed
         if pii.$loginInfo.value == nil {
             _ = try await pii.$loginInfo.get(on: db)
         }
@@ -47,7 +50,7 @@ extension UserController {
             _ = try await loginInfo.$accessToken.get(on: db)
         }
         
-        // Create / Use existing accessToken:
+        // Create / Use existing accessToken: // First encounter with access token.
         var loginToken : MNAccessToken? = loginInfo.accessToken
         if let at = loginInfo.accessToken {
             loginToken = at
@@ -78,29 +81,42 @@ extension UserController {
                 break
             }
         }
+        
+        // Renew expired token
+        if let existingLoginToken = loginToken, existingLoginToken.isExpired {
+            dlog?.note("LOGIN    Old token has expired: \(existingLoginToken.expirationDate.debugDescription)")
+            let isShouldRenew = true // TODO: RRabac & permissions to renew access token
+            if isShouldRenew && user.status == .active {
+                // todo: Make SURE DELETION does not require some detaching...
+                // DO NOT: loginInfo.$accessToken.wrappedValue = nil
+                // DO NOT: loginToken.detach()
+                try await loginToken?.delete(on: db) // soft delete
+                loginToken = nil
+            }
+        }
+         
         if loginToken == nil {
             // Create new access token
             let newToken = MNAccessToken(loginInfo: loginInfo)
-            loginInfo.accessToken = newToken
-            // ? Should we? user.loginInfos.append(loginInfo)
+            newToken.$user.id = user.id
             DLog.note("LOGIN    New access token created: \(newToken) (none found)!")
             loginToken = newToken
         }
-        
-        dlog?.info("LOGIN found token: \(loginToken.descOrNil)")
-        
+
         // Save lastUsed dates etc
         let now = Date.now
-        loginToken?.lastUsedDate = now // Should we mark this as a login using this accessToken?
-        loginInfo.latestLoginDate = now
-        
-        loginInfo.isLoggedIn = true
+        loginToken?.setWasUsedNow(isSaveOnDB: nil, now: now)
+        loginInfo.setLoggedIn(true, now: now)
+        // TODO: req?.routeContext?.isLoggedIn = true
+        // TODO: Create a login/logout history record.
         
         // Save to request / session:
         if let req = req {
             // DO NOT: req .auth .login(user)  - this is to be called in the various authenitation Middlewares.
             req.saveToReqStore(key: ReqStorageKeys.selfUser, value: user, alsoSaveToSession: true)
             req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: user.id!.uuidString, alsoSaveToSession: true)
+            
+            // Note: loginToken may have been replaced!
             req.saveToReqStore(key: ReqStorageKeys.selfAccessToken, value: loginToken, alsoSaveToSession: true)
         }
         
@@ -113,56 +129,9 @@ extension UserController {
     // MARK: actual request/s
     /// Login a user to the system
     /// - Parameter req  login reuqest content
-    /// - Returns: UserLoginResponse containing the User structure and the bearerToken
-    func login(req: Request) async throws -> UserLoginResponse {
-        dlog?.info("login(req:) ------ ")
-        throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: bad credientials (unknown)")
-    }
-    
-    func XXlogin(req: Request) async throws -> UserLoginResponse {
-        throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: bad credientials (unknown)")
-        /*
-        
-        
-        // Get the user we are trying to login using the pii info:
-        var loginReq = UserLoginRequest.empty
-        do {
-            loginReq = try req.content.decode(UserLoginRequest.self)
-        } catch let error {
-            dlog?.note("login(request:...) content could not be parsed: \(error.description)")
-        }
-        
-        // Make sure domain is correct and equals the current domain:
-        if loginReq.userDomain == UserLoginRequest.USER_DOMAIN_EMPTY {
-            loginReq.userDomain = req.domain ?? AppServer.DEFAULT_DOMAIN
-        } else if loginReq.userDomain != req.domain {
-            throw AppError(code: .user_login_failed_bad_credentials, reason: "Bad credientials: Domain access issue.")
-        }
-            
-        guard let piiInfo = try loginReq.asPiiInfo() else {
-            throw AppError(code: .user_login_failed_bad_credentials, reason: "Bad credientials: User identifying info not found.")
-        }
-        
-        // Find user and permission:
-        let permissionGiver : AppPermissionGiver = req.selfUser ?? appServer.defaultPersmissionGiver
-        let users = try await self.dbFindUsers(db: req.db, pii: piiInfo, permissionGiver: permissionGiver)
-        guard let user = users.first else {
-            throw AppError(code: .user_login_failed_user_not_found, reason: "User was not found")
-        }
-        
-        // Load all relevant sub-components:
-        try await user.forceLoadAllPropsIfNeeded(db: req.db)
-
-        // Save pii and user info into req storage:
-        req.saveToReqStore(key: ReqStorageKeys.user.self, value: user)
-        let passAuthenticator = req.application.middleware.getMiddleware(ofType: UserPasswordAuthenticator.self) ?? UserPasswordAuthenticator()
-        let basicAuthorization = BasicAuthorization(username: piiInfo.strValue, password: loginReq.userPassword)
-        
-        // Authenticate using Vapor mechanisms:
-        try await passAuthenticator.authenticate(basic: basicAuthorization, for: req)
-        // Success or authenticate threw a login error:
-        
-        /*
+    /// - Returns: a Response, encoding a UserLoginResponse and settings a cookie in the header
+    func login(req: Request) async throws -> Response {
+        /* for reference:
             MNUser
              - personInfo : MNPersonInfo? (as child)
                 - name : MNPersonName? (as field)
@@ -170,106 +139,109 @@ extension UserController {
                 - userPII : MNUserPII? (as child)
                 - accessToken : MNAccessToken? (as child)
          */
-        guard let loginInfos : [MNUserLoginInfo] = req.getFromReqStore(key: ReqStorageKeys.loginInfos, getFromSessionIfNotFound: true), let loginInfo = loginInfos.first, let userPII = loginInfo.userPII else {
-            dlog?.warning("Login succeeded but no loginInfo was saved into reqStore or sessionStore!")
-            throw AppError(code: .user_login_failed_bad_credentials, reason: "User login info was not found")
+        
+        // Assumes req.auth.login(user) was called in UserPasswordAuthenticator or otherwise
+        guard let appServer = req.application.appServer, appServer.isBooting == false else {
+            throw AppError(code: .http_stt_expectationFailed, reason: "Server not online")
         }
         
-        // Execute successfult login
+        // Get the user we are trying to login using the pii info or session:
+        let user : MNUser = try req.auth.require(MNUser.self)
+        
+        // Load all relevant sub-components for user:
+        try await user.forceLoadAllPropsIfNeeded(db: req.db)
+        
+        // Check if user status allows login: (state for user)
+        guard MNModelStatus.allLoginAlowingCases.contains(user.status) else {
+            let isUnknown = user.status == .unknown
+            let reason = isUnknown ? "unknown permissions" : "revoked permissions"
+            let code : MNErrorCode = isUnknown ? .user_login_failed_no_permission : .user_login_failed_permissions_revoked
+            throw AppError(code: code, reason: "User login failed: \(reason)")
+        }
+        
+        dlog?.success("login SUCCESS \(user)")
+        
+        var loginRequset : UserLoginRequest? = req.getFromReqStore(key: ReqStorageKeys.loginRequest)
+        if loginRequset == nil, let basic = req.headers.basicAuthorization {
+            loginRequset = UserLoginRequest(basicAuth: basic, domain: req.domain ?? AppServer.DEFAULT_DOMAIN)
+        }
+        guard let loginReq = loginRequset else {
+            throw AppError(code: .user_login_failed_name_and_password, reason: "User login failed: bad credientials (unknown)")
+        }
+        
+        // Assumes req.getFromReqStore
+        // req.saveToReqStore(key: ReqStorageKeys.loginInfos was executed
+        // NOTE: assumes UserPasswordAuthenticator saved loginInfos where the first value is the value that matches the login request's PII:
+        // NOTE: No need to use loginReq.asPiiInfo(), since it is assume to have been done in the UserPasswordAuthenticator and saved to using saveToReqStore(...)
+        guard let loginInfos : [MNUserLoginInfo] = req.getFromReqStore(key: ReqStorageKeys.loginInfos),
+                let loggedInInfo = loginInfos.first,
+              let loggedInUserPII = loggedInInfo.userPII else {
+            throw AppError(code: .user_login_failed_bad_credentials, reason: "User login failed: User identifying info not found")
+        }
+        
+        // Make sure domain is correct and equals the current domain in the request and for the found loginInfo / PII:
+        let reqDomain = MNDomains.sanitizeDomain(req.domain)
+        
+        if loginReq.userDomain == UserLoginRequest.USER_DOMAIN_EMPTY {
+            throw AppError(code: .user_login_failed_bad_credentials, reason: "Bad credientials: domain access issue.")
+        } else if loginReq.userDomain != reqDomain ||
+                  loginReq.userDomain != loggedInUserPII.piiDomain
+        {
+            var msg = "Bad credientials: Domain incompatible issue."
+            if Debug.IS_DEBUG {
+                msg += " \(loginReq.userDomain) != \(loggedInUserPII.piiDomain) != \(reqDomain)"
+            }
+            throw AppError(code: .user_login_failed_bad_credentials, reason: msg)
+        }
+        
+        // Find best permission giver for this action / request path: (RABAC?)
+        // let permissionGiver : (any AppPermissionGiver)? = user // ?? req.selfUser ?? appServer.defaultPersmissionGiver
+        // TODO: Complete permission to login // RRABAC
+        
+        
         // Check if already logged in or logged in as other user:
-        if loginInfo.isLoggedIn == true {
-            DLog.note("LOGIN    loginInfo user is already logged in!")
+        if loggedInInfo.isLoggedIn == true {
+            DLog.note("LOGIN    loginInfo user [\(user.displayName)] was already logged in!")
             // Return what ?
         }
-        try await self.execSuccessfulLogin(db:req.db, req: req, user: user, pii: userPII)
         
-        // TODO: Create a login/logout history record:
+        // Execute successful login
+        // Save pii and user info into req storage, save to db etc.
+        // Will also renew / replace accessToken to a valid, non-expired token
+        try await self.execSuccessfulLogin(db:req.db, req: req, user: user, pii: loggedInUserPII)
         
-        // TODO: Create a login/logout response:
         // Assumed to be created in execSuccessfulLogin and saved into selfAccessToken.
-        let accessToken = (loginInfo.accessToken ?? req.getFromReqStore(key: ReqStorageKeys.selfAccessToken))!
-        let bearerTokenStr = accessToken.asBearerTokenString(forClient: true)
-        let response = UserLoginResponse(bearerToken: bearerTokenStr, isNewlyRenewed: accessToken.isNewlyRenewed)
-        return response
+        let accessToken : MNAccessToken = (loggedInInfo.accessToken ?? req.getFromReqStore(key: ReqStorageKeys.selfAccessToken))!
+        if accessToken.isExpired {
+            dlog?.note("LOGIN    current access token has expired! \(accessToken.expirationDate.debugDescription) at: \(accessToken.expirationDate.timeIntervalSinceNow.asDDHHMMStr.descOrNil)")
+            
+        }
+        if !accessToken.isValid {
+            dlog?.note("LOGIN    current access token is not valid! at id:\(accessToken.id.descOrNil)")
+        }
         
-        //
-         */
+        let bearerToken = accessToken.asBearerTokenString(extraInfo: true)
+        let isClientReditect = req.url.path.contains(anyOf: [DashboardController.BASE_PATH.description], isCaseSensitive: false)
+        
+        // Make response
+        let userLoginResponse = UserLoginResponse(user: user, bearerToken: bearerToken, isNewlyRenewed: accessToken.isNewlyRenewed, isClientReditect: isClientReditect)
+        let response = try await userLoginResponse.encodeResponse(for: req)
+        
+        // Set cookie in the headers
+        let cookieName = UserTokenAuthenticator.updateTokenCookieName()
+        let tokenRemainingDuration : Int  = Int(abs(accessToken.validDuration ?? accessToken.expirationDate.timeIntervalSinceNow))
+        let cookie = HTTPCookies.Value(string: bearerToken,
+                                       expires: accessToken.expirationDate,
+                                       maxAge: Int(abs(tokenRemainingDuration)), // the time in seconds
+                                       domain: req.application.http.server.configuration.hostname,
+                                       isSecure: false, // TODO: Detect if TLS settings of server are active and set secure to true
+                                       isHTTPOnly: !Debug.IS_DEBUG,
+                                       sameSite: .lax) // HTTPCookies.SameSitePolicy.strict
+        // Note this is the bearer token cookie name, not the session cookie
+        response.cookies[cookieName] = cookie
+        // TODO: Detect TLS settings of server: cookie isSecure:true will make the client send the cookie only when calling HTTPS and not when calling HTTP..
+        
+        // Return
+        return response
     }
 }
-
-
-/*
- if selfUser == nil {
-     
-     
-     
- }
- if let abort = abort  { throw abort }
- 
- // Get / create self user
- if selfUser == nil { // we can assume UserMgr.isLoginRequest(request: req) returns true for the literal route called "login".
-     if let userid : String = useridParam, let uid = UserUID(uuidString: userid) {
-         do {
-             let user = try await UserMgr.shared.get(db: req.db, userid: uid, selfUser: nil)
-             dlog?.success("found user \((user?.username).descOrNil) for id: \(userid)")
-             selfUser = user
-         } catch let error {
-             dlog?.fail("failed finding user for id: \(userid) error:\(error.description)")
-             abort = Abort(appErrorCode:.user_login_failed_user_not_found, reason: "User was not found")
-         }
-     } else if let username = usernameParam {
-         let user = try await UserMgr.shared.get(db: req.db, username: username, selfUser: selfUser)
-         dlog?.info("login(req:) by username \(username) \(user.descOrNil)")
-         selfUser = user
-     }
- } else {
-     abort = Abort(appErrorCode:.http_stt_alreadyReported, reason: "User is already logged in")
- }
- if let abort = abort  { throw abort }
- 
- guard let user = selfUser else {
-     // selfUser was not assigned
-     //throw Abort(.unauthorized, reason: "unauthorized caH3")
-     throw Abort(appErrorCode:.user_login_failed_user_not_found, reason: "User was not found")
- }
-
- // Get or renew the access token from the local DB:
- do {
-     let token = try await UserMgr.shared.getAccessToken(request: req, makeIfMissing:true, renewIfExpired: true, user: user)
-     let newToken = BearerToken(token: token.asBearerToken(), expiration: token.expirationDate)
-     if token.isValid {
-         return UserLoginResponse(user: user, bearerToken: newToken)
-     } else {
-         throw Abort(appErrorCode:.user_login_failed_bad_credentials, reason: "User token has expired")
-     }
- } catch let error as NSError {
-     dlog?.warning("Failed creating access token for login attempt for [\(user.username)]")
-     throw Abort(appErrorCode:.user_login_failed_bad_credentials, reason: "Failed creating access token for login attempt for [\(user.username)] underlying error: \(error.domain)|\(error.code)|\(error.reason)")
- }
-}
-
- ...
- 
- 
- //            let req = UserLoginRequest(username: T##String?,
- //                                       password: T##String,
- //                                       userID: T##String?,
- //                                       remember_me: T##Int?)
- //            // Fallback:
- //            // Get params regardless of request method:
- //            let allParams = req.collatedAllParams().merging(dict: req.da)
- //            let useridParam     = req.anyParameters(fromAnAllParams:allParams, forKeys: ["userid", "id"]).first?.value
- //            let usernameParam   = req.anyParameters(fromAnAllParams:allParams, forKeys: ["email", "username", "user name", "name", "user_name"]).first?.value
- //            let pwdParam        = req.anyParameters(fromAnAllParams:allParams, forKeys: ["password", "pwd", "pass", "user_pwd", "user_password"]).first?.value
- //
- //            loginReq = UserLoginRequest(username: usernameParam, password: pwdParam)
- 
- 
- 
- ......
- 
- 
- 
- ....
- 
- */

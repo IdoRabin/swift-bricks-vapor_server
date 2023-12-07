@@ -30,28 +30,20 @@ class DashboardController : AppRoutingController {
     
     // MARK: Private
     @discardableResult
-    private func dboardRedirectToErrorPage(_ req: Request, error:Error) async throws ->Response  {
+    private func dboardRedirectToErrorPage(_ req: Request, error:Error) async throws -> Response  {
         return try await Self.dboardRedirectToErrorPage(req, error:error)
     }
 
-    private func isLoggedIn(req:Request)->Bool {
-        return false
-//        guard let user = req.getSelfUser(isTryDeepQuery: true) else {
-//            return false
-//        }
-//        guard let uid = user.id else {
-//            return false
-//        }
-//        guard let accessToken = req.getAccessToken(context:"DashboardController.isLoggedIn") else {
-//            return false
-//        }
-//
-//        return uid.uuidString != UID_EMPTY_STRING && accessToken.isValid
-    }
-
     // MARK: Public static methods
-    static func dboardRedirectToErrorPage(_ req: Request, error:Error) async throws ->Response {
+    static func dboardRedirectToErrorPage(_ req: Request, error:Error) async throws -> Response {
         let params = ["req":req.requestUUIDString]
+        let origRoute = req.url.path
+        let code = AppError.bestErrorCode(error)
+        let reason = AppError.bestErrorReason(error)
+        let appError = (error as? AppError) ??  AppError(code: AppErrorCode(rawValue: code)!, reason: reason)
+        let routeContext = try await MNRoutingBase.getOrCreateRouteContext(for: req)
+        routeContext.setError(req: req, err: appError, errorOrigPath: origRoute, errReqId: req.id)
+        
         if req.hasSession {
             // Reedirect
             //   case .permanent 301  A cacheable redirect.
@@ -59,19 +51,16 @@ class DashboardController : AppRoutingController {
             //   case .temporary 307  Maintains original request method, ie: PUT will call PUT on redirect.
             
             // Save error and redirect to session history:
-            req.routeHistory?.update(req: req, error: error)
+            req.routeHistory?.update(req: req, error: appError)
             
             // String+PathComponents.swift OR RoutinKit.PathComponent
             return req.wrappedRedirect(to: "/\(Self.BASE_PATH)/\(Self.ERROR_PAGE_COMP)",
                                        type: .normal,
                                        params: params,
                                        isShoudlForwardAllParams: false,
+                                       errorToForward: appError,
                                        contextStr: "redirected to error page from \(req.url.string)")
         } else {
-            let origRoute = req.url.path
-            let code = AppError.bestErrorCode(error)
-            let reason = AppError.bestErrorReason(error)
-            let appError = AppError(AppErrorCode(rawValue: code)!, reason: reason)
             return req.wrappedRedirect(to: "\(Self.ERROR_PAGE_COMP)?\(params.toURLQueryString())",
                                        type: .normal,
                                        encoding: .base64,
@@ -117,7 +106,7 @@ class DashboardController : AppRoutingController {
             // All pages except the catchall:
             
             // Error page:
-            dashboardRoute.on(.GET, pathComp(Self.ERROR_PAGE_COMP), use: self.dboardErrorPage).setting(
+            dashboardRoute.on(.GET, Self.ERROR_PAGE_COMP.pathComps, use: self.dboardErrorPage).setting(
                 productType: .webPage,
                 title: "\(Self.PAGE_TITLE_PREFIX): Error",
                 description: "An error page, either of an http status code or other error code",
@@ -131,21 +120,23 @@ class DashboardController : AppRoutingController {
                 group: groupName)
             
             // Pages and protected pages:
-            for page in Self.FREE_PAGE_ROUTES {
-                dashboardRoute.on(.GET, pathComp(page), use: self.dboardPage)
-                    .setting(
-                        productType: .webPage,
-                        title: "\(Self.PAGE_TITLE_PREFIX): \(page.capitalizedFirstWord())",
-                        description: "A content webpage page of \(page.lowercased()) for the dashboard",
-                        requiredAuth: .webPageAgent,
-                        group: groupName)
+            dashboardRoute.group(UserTokenAuthenticator()/* detect logged-in but not guard */) { protectedRoutes in
+                for page in Self.FREE_PAGE_ROUTES {
+                    dashboardRoute.on(.GET, page.pathComps, use: self.dboardPage)
+                        .setting(
+                            productType: .webPage,
+                            title: "\(Self.PAGE_TITLE_PREFIX): \(page.capitalizedFirstWord())",
+                            description: "A content webpage page of \(page.lowercased()) for the dashboard",
+                            requiredAuth: .webPageAgent,
+                            group: groupName)
+                }
             }
             
             // = = = = Dashboard protected paths = = = =
             // guards against unautorized users
             dashboardRoute.group(UserTokenAuthenticator(), AppUser.guardMiddleware()) { protectedRoutes in
                 for page in Self.PROTECTED_PAGE_ROUTES {
-                    protectedRoutes.on(.GET, pathComp(page), use: self.dboardPage)
+                    protectedRoutes.on(.GET, page.pathComps, use: self.dboardPage)
                         .setting(
                             productType: .webPage,
                             title: "\(Self.PAGE_TITLE_PREFIX): \(page.capitalizedFirstWord())",
@@ -157,8 +148,8 @@ class DashboardController : AppRoutingController {
 
             // == API: "POST" === calls to dashboard route (wraps other api calls)
             // All pages with webform / "POST" method:
-            dashboardRoute.group(UserPasswordAuthenticator(), AppUser.guardMiddleware()) { loginRoutes in
-                loginRoutes.on([.POST, .GET], pathComp("requestLogin"), body:.stream, use: self.requestLogin)?
+            dashboardRoute.group(UserPasswordAuthenticator(allowedRoles: ["TODO:Dasboard access"]), AppUser.guardMiddleware()) { loginRoutes in
+                loginRoutes.on(.POST, "login".pathComps, body:.stream, use: self.dboardPOSTLogin)
                     .setting(
                         productType: .webPage,
                         title: "Dashboard login POST API call",
@@ -167,15 +158,21 @@ class DashboardController : AppRoutingController {
                         group: groupName)
             }
                 
-            dashboardRoute.on(.POST, pathComp("logout"), use: self.dboardPOSTLogout)
+            dashboardRoute.on(.GET, "logout".pathComps, use: self.logout)
                 .setting(
                     productType: .webPage,
                     title: "Dashboard logout POST API call",
                     description: "an api POST call wrapping a /user/me/logout call",
                     requiredAuth: [.webPageAgent, .bearerToken, .webPageAgent],
                     group: groupName)
+                .setting(
+                    productType: .webPage,
+                    title: "Dashboard logout",
+                    description: "a GET call to logout from dashboard. will redirect to dashboard home page",
+                    requiredAuth: .webPageAgent,
+                    group: groupName)
 
-            dashboardRoute.on(.POST, pathComp("register"), use: self.dboardPOSTRegister)
+            dashboardRoute.on(.POST, "register".pathComps, use: self.dboardPOSTRegister)
                 .setting(
                     productType: .webPage,
                     title: "Dashboard register POST API call",
@@ -186,6 +183,7 @@ class DashboardController : AppRoutingController {
             // Fallback catchall:
             dashboardRoute.get(.catchall) { req in
                 dlog?.info("Dashboard catchall will throw http status 404!")
+                let _ /*routeContext*/ = try await MNRoutingBase.getOrCreateRouteContext(for: req)
                 return try await self.dboardRedirectToErrorPage(req, error: Abort(.notFound, reason:"Path not found!"))
             }.setting(
                 productType: .webPage,
@@ -196,14 +194,25 @@ class DashboardController : AppRoutingController {
         }
     }
     
-    private func prepContext(_ req:Request)->AppRouteContext {
-        return req.routeContext ?? AppRouteContext.setupRouteContext(for: req)
+    func logout(_ req: Request) async throws -> Response {
+        guard let users = req.application.appServer?.users else {
+            throw AppError(code: .http_stt_internalServerError, reason: "server error: login .users not found")
+        }
+        
+        let logoutResult = try await users.logout(req: req)
+        return req.redirect(to: basePath.fullPath, redirectType: .temporary)
     }
     
-    func dboardLoginPage(_ req: Request, context:AppRouteContext) {
+    func dboardLoginPage(_ req: Request) async throws {
+        
+        // Try to authenticate (without throwing) - see if any user is already logged in
+        await self.authenticateIfPossible(unknownReq: req)
+        
         var contextPageParams : [String:String] = [:]
-        let errCode = Int(context.errorCode ?? "0") ?? 0
-        if errCode != 0 {
+        // TODO: Reimplement error code evaluation
+        let errCode = 0 // Int(context.errorCode ?? "0") ?? 0
+        if errCode != 0 { // when reloaded w / error
+            // TODO: Use this only is we assume a "GET" login and not a urlRequset to: .POST /dboardPOSTLogin...
             let aeCode = AppErrorCode(rawValue: errCode) ?? .http_stt_unauthorized
             
             // Page params:
@@ -235,11 +244,11 @@ class DashboardController : AppRoutingController {
                 
             case .user_login_failed_user_name:
                 isUsernameInvalid = true
-                invalidUsernameText = context.errorReason ?? "Bad or missing user name"
+                // TODO: REimplement invalidUsernameText = context.errorReason ?? "Bad or missing user name"
                 
             case .user_login_failed_password:
                 isPasswordInvalid = true
-                invalidPasswordText = context.errorReason ?? "Bad or missing password or user was not found."
+                // TODO: REimplement invalidPasswordText = context.errorReason ?? "Bad or missing password or user was not found."
                 
             case .user_login_failed_name_and_password:
                 isUsernameAndPwdInvalid = true
@@ -247,7 +256,7 @@ class DashboardController : AppRoutingController {
                 isPasswordInvalid = true
                 invalidUsernameText = "Username is missing or wrong"
                 invalidPasswordText = "Password is missing or wrong"
-                invalidUsernameAndPwdText = context.errorReason ?? "Bad or missing password or user name or user was not found."
+                // TODO: REimplement invalidUsernameAndPwdText = context.errorReason ?? "Bad or missing password or user name or user was not found."
                 
             case .user_login_failed_user_not_found:
                 isUsernameAndPwdInvalid = true
@@ -272,60 +281,64 @@ class DashboardController : AppRoutingController {
             contextPageParams["invalidFieldsAreAlwaysIncluded"] = "true"
             
             // Finally:
-            context.pageParams.merge(dict: contextPageParams)
+            dlog?.todo("Reimplement  context.pageParams.merge(dict: with infoable / contextPageParams")
+            // context.pageParams.merge(dict: contextPageParams)
         }
     }
     
-    func dboardPage(_ req: Request) -> EventLoopFuture<View> {
-        let context = prepContext(req)
+    func dboardPage(_ req: Request) async throws -> View {
+        let routeContext = try await self.getOrCreateRouteContext(for: req)
         
         let allParams : [String:String] = [:] // req.collatedAllParams()
         if Debug.IS_DEBUG {
             if (allParams.count > 0) {
-                dlog?.info("dboardErrorPage collatedAllParams: \(allParams.descriptionLines)")
+                dlog?.info("dboardPage collatedAllParams: \(allParams.descriptionLines)")
             }
         }
         
         let errReqId = allParams["req"]?.removingPercentEncodingEx ?? ""
         if let truple = req.getError(byReqId: errReqId) {
-            context.setError(req:req, errorTruple: truple)
+            routeContext.setError(req:req, errorTruple: truple)
         }
         
         // Other cases
         switch req.url.path.asNormalizedPathOnly().lastPathComponent().trimming(string: "/") {
         case "login":
-            dboardLoginPage(req, context: context) // webpage
+            try await dboardLoginPage(req) // webpage
         case "loginRequest":
             if [.POST, .GET].contains(req.method) {
-                dboardLoginPage(req, context: context) // API requset
+                try await dboardLoginPage(req) // API requset
             }
         default:
             break
         }
         
-        let futureView = req.view.render(req.url.path, context)
-        futureView.whenComplete { result in
-            // req.routeHistory?.update(req: req, result: result)
-        }
-        
-        return futureView
-    }
-    
-    func dboardHome(_ req: Request) -> EventLoopFuture<View> {
-        
-        // Context
-        let context = prepContext(req)
-        let futureView = req.view.render("/\(basePath.description)/main", context)
+        let futureView = req.view.render(req.url.path, routeContext)
         futureView.whenComplete { result in
             req.routeHistory?.update(req: req, result: result)
         }
-        return futureView
+        return try await futureView.get()
     }
     
-    func dboardErrorPage(_ req: Request) -> EventLoopFuture<View> {
-        // dlog?.info("dboardErrorPage query: \(req.url.query.descOrNil)")
+    func dboardHome(_ req: Request) async throws -> View {
         
-        let allParams : [String:String] = [:] // = req.collatedAllParams()
+        // Try to authenticate (without throwing)
+        await self.authenticateIfPossible(unknownReq: req)
+        
+        // Context
+        let routeContext = try await self.getOrCreateRouteContext(for: req)
+        let futureView = req.view.render("/\(basePath.string)/main", routeContext)
+        futureView.whenComplete { result in
+            req.routeHistory?.update(req: req, result: result)
+        }
+        return try await futureView.get()
+    }
+    
+    func dboardErrorPage(_ req: Request) async throws -> View {
+        // dlog?.info("dboardErrorPage query: \(req.url.query.descOrNil)")
+        await self.authenticateIfPossible(unknownReq: req)
+        
+        let allParams : [String:String] = req.collatedAllParams()
         if Debug.IS_DEBUG {
             if (allParams.count > 0) {
                 dlog?.info("dboardErrorPage collatedAllParams: \(allParams.descriptionLines)")
@@ -334,24 +347,17 @@ class DashboardController : AppRoutingController {
         
         let errReqId = allParams["req"]?.removingPercentEncodingEx ?? ""
         
-        // Get latest context:
-        let context = prepContext(req)
+        // Get latest context for the error page:
+        let routeContext = try await self.getOrCreateRouteContext(for: req)
         if let truple = req.getError(byReqId: errReqId) {
-            context.setError(req:req, errorTruple: truple)
+            routeContext.setError(req:req, errorTruple: truple)
         }
         
-        let futureView = req.view.render("/\(basePath.description)/\(Self.ERROR_PAGE_COMP)", context)
+        let futureView = req.view.render("/\(basePath.string)/\(Self.ERROR_PAGE_COMP)", routeContext)
         futureView.whenComplete { result in
-            switch result {
-            case .success(let success):
-                dlog?.info("\(Self.ERROR_PAGE_COMP) whenComplete success: \(String(describing:success))")
-            case .failure(let err):
-                dlog?.info("\(Self.ERROR_PAGE_COMP) whenComplete error: \(String(describing:err))")
-            }
-            
-            // req.routeHistory?.update(req: req, result: result)
+            req.routeHistory?.update(req: req, result: result)
         }
-        return futureView
+        return try await futureView.get()
     }
     
     // MARK: Web form [POST] - dashboard wraps API calls from the web pages only -
@@ -362,89 +368,46 @@ class DashboardController : AppRoutingController {
     */
     
     // NOTE: We wrap the native UserConbtroller api to allow modularity and separation of responsibility between web forms requests and login/logout
-    func requestLogin(_ req: Request) async throws -> Response {
-        dlog?.info("requestLogin called ---- ")
-        throw AppError(code: .user_login_failed_bad_credentials, reason: "requestLogin failed: bad credientials (unknown)")
+    // TODO: Consider adding a CSRF token to view pages
+    func dboardPOSTLogin(_ req: Request) async throws -> Response {
         
-        // Redictect codes: force redirect:
-        //   case .permanent 301  A cacheable redirect.
-        //   case .normal    303  "see other" Forces the redirect to come with a GET, regardless of req method.
-        //   case .temporary 307  Maintains original request method, ie: PUT will call PUT on redirect.
-//        let response : UserController.UserLoginResponse
-//        let _ /*context*/ = self.prepContext(req)
-//        if let userController = AppServer.shared.users {
-//            response = try await userController.login(req: req)
-//        } else {
-//            response = try await UserController(app:req.application).login(req: req)
-//        }
+        guard let users = req.application.appServer?.users else {
+            throw AppError(code: .http_stt_internalServerError, reason: "server error: login .users not found")
+        }
         
+        // We are getting a Response and not UserLoginResponse because we needed to set a cookie in users.login(req:...)
+        let result = try await users.login(req: req)
+//        return req.wrappedRedirect(to: "/\(basePath.string)/",
+//                                   type: .normal,
+//                                   params: result.asDict,
+//                                   isShoudlForwardAllParams: true,
+//                                   contextStr:"DashboardController.dboardPOSTLogin")
+         return result
+    }
+    
+//    func dboardPOSTLogout(_ req: Request) async throws -> Response {
+//        // Redictect codes: force redirect:
+//        //   case .permanent 301  A cacheable redirect.
+//        //   case .normal    303  "see other" Forces the redirect to come with a GET, regardless of req method.
+//        //   case .temporary 307  Maintains original request method, ie: PUT will call PUT on redirect.
+//        
+//        dlog?.info("dboardPOSTLogout call logoutlogout for user id: \(req.selfUserUUIDString.descOrNil)")
 //        do {
-            // TODO: should UserController be inited? should this be accessed via AppServer.user
-            
-//            req.routeHistory?.update(req: req, status: HTTPStatus.ok)
-//            dlog?.success("requestLogin success: \(response.serializeToJsonString(prettyPrint: true).descOrNil)")
-//            return req.wrappedRedirect(to: "/\(basePath)/",
+//            // var response : UserController.UserLogoutResponse
+//            if let userController = AppServer.shared.users {
+//                _ = try await userController.logout(req: req)
+//            } else {
+//                _ = try await UserController(app:req.application, manager: AppServer.shared.routes).logout(req: req)
+//            }
+//            return req.wrappedRedirect(to: "/\(basePath.string)/",
 //                                       type: .normal,
 //                                       params: [:],
 //                                       isShoudlForwardAllParams: false,
-//                                       contextStr: "DashboardController.requestLogin login success redirects to dashboard main page")
+//                                       contextStr:"DashboardController.dboardPOSTLogout")
 //        } catch let error {
-//            let code = AppError.bestErrorCode(error)
-//            let reason = AppError.bestErrorReason(error)
-//            let appError = AppError(code:AppErrorCode(rawValue: code) ?? .misc_unknown, reason: reason, underlyingError: error)
-//            dlog?.fail("requestLogin failed: error: \(appError.description) | \(error.description)")
-//            throw appError // returns the error
-//            
-//            if req.method == .POST && req.headers.clientType == .browser {
-//                dlog?.info("POST method (browser)")
-//            } else if req.method == .GET {
-//                dlog?.info("GET method")
-//                switch code {
-//                case _ where AppErrorCode.allUserLogin.intCodes.contains(code):
-//                    fallthrough
-//                case _ where AppErrorCode.allUsername.intCodes.contains(code):
-//                    fallthrough
-//                case 400..<499:
-//                    // Validation error in login page.
-//                    return req.wrappedRedirect(to: "/\(basePath)/login",
-//                                               type:.normal,
-//                                               params: ["req":req.requestUUIDString],
-//                                               isShoudlForwardAllParams: false,
-//                                               errorToForward: appError,
-//                                               contextStr: "Validation error in login page.")
-//                default:
-//                    // Major error in login page
-//                    return try await self.dboardRedirectToErrorPage(req, error: error)
-//                }
-//            }
+//            return try await self.dboardRedirectToErrorPage(req, error: error)
 //        }
-        
-        // return try await response.encodeResponse(for: req)
-    }
-    
-    func dboardPOSTLogout(_ req: Request) async throws -> Response {
-        // Redictect codes: force redirect:
-        //   case .permanent 301  A cacheable redirect.
-        //   case .normal    303  "see other" Forces the redirect to come with a GET, regardless of req method.
-        //   case .temporary 307  Maintains original request method, ie: PUT will call PUT on redirect.
-        
-        dlog?.info("dboardPOSTLogout call logout for user id: \(req.selfUserUUIDString.descOrNil)")
-        do {
-            // var response : UserController.UserLogoutResponse
-            if let userController = AppServer.shared.users {
-                _ = try await userController.logout(req: req)
-            } else {
-                _ = try await UserController(app:req.application).logout(req: req)
-            }
-            return req.wrappedRedirect(to: "/\(basePath)/",
-                                       type: .normal,
-                                       params: [:],
-                                       isShoudlForwardAllParams: false,
-                                       contextStr:"DashboardController.dboardPOSTLogout")
-        } catch let error {
-            return try await self.dboardRedirectToErrorPage(req, error: error)
-        }
-    }
+//    }
     
     func dboardPOSTRegister(_ req: Request) async throws -> Response {
         // Redictect codes: force redirect:
@@ -458,10 +421,10 @@ class DashboardController : AppRoutingController {
             if let userController = AppServer.shared.users {
                 _ = try await userController.createUser(request: req)
             } else {
-                _ = try await UserController(app:req.application).createUser(request: req)
+                _ = try await UserController(app:req.application, manager: AppServer.shared.routes).createUser(request: req)
             }
 
-            return req.wrappedRedirect(to: "/\(basePath)/",
+            return req.wrappedRedirect(to: "/\(basePath.string)/",
                                        type: .normal,
                                        params: [:],
                                        isShoudlForwardAllParams: false,

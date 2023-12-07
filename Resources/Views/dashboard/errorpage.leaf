@@ -55,7 +55,7 @@
         
         <!-- trailing segment -->
         <div class="col-5 col-m-4 col-sm-3 p-0 m-0 rounded-5-end" style="overflow:clip"/>
-            <img src="/images/bricks_wall_wht_bkg.jpg" alt="" width="720" style="opacity:0.8;position: relative;bottom:-70px;z-index:0;"/>
+            <img src="/images/web_bkgs/bricks_wall_wht_bkg.jpg" alt="" width="720" style="opacity:0.8;position: relative;bottom:-70px;z-index:0;"/>
         </div>
     </div>
 </div>

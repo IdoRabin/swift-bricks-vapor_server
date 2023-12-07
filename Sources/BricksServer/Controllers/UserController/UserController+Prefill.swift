@@ -19,6 +19,56 @@ fileprivate struct UserControllerPrefill : AppPermissionGiver {
 }
 extension UserController /* +Prefill */ {
 
+    func prefillDebugUsersDataIfNeeded(db:Database) async throws {
+        guard Debug.IS_DEBUG else {
+            return
+        }
+        
+        let prefiller = UserControllerPrefill()
+        try await db.transaction { db in
+            // Config contains the above info:
+            let pii1 = MNPIIInfo(piiType: .name,
+                                 strValue: "idorabin",
+                                 domain: AppServer.DEFAULT_DOMAIN,
+                                 hashedPwd: try UserPasswordAuthenticator.digestPwdPlainText(plainText: "123456"))
+            
+            let pii2 = MNPIIInfo(piiType: .email,
+                                 strValue: "idorabin@gmail.com",
+                                 domain: AppServer.DEFAULT_DOMAIN,
+                                 hashedPwd: try UserPasswordAuthenticator.digestPwdPlainText(plainText: "123456"))
+            var user : AppUser? = nil
+            do {
+                user = try await AppServer.shared.users?.dbCreateUser(
+                    db:db,
+                    displayName: "Ido Rabin",
+                    piiInfo: pii1,
+                    userSetup: { usr in
+                        // Change any other prop for user before save
+                        usr.status = .active
+                    },
+                    permissionGiver: prefiller)
+                dlog?.verbose("prefillAdminUsersData idorabin DEBUG user was found or created: \(user.descOrNil)")
+            } catch let error {
+                let code = (error as? MNError)?.code ?? (error as NSError).code
+                switch code {
+                case AppErrorCode.db_already_exists.rawValue:
+                    dlog?.fail("prefillDebugUsersDataIfNeeded DEBUG user [idorabin] already exists")
+                case AppErrorCode.user_invalid_username.rawValue,
+                    AppErrorCode.user_login_failed_user_name.rawValue,
+                    AppErrorCode.user_login_failed_user_not_found.rawValue:
+                    // User does not exist:
+                    dlog?.fail("prefillDebugUsersDataIfNeeded DEBUG user [idorabin] does not exist:")
+                default:
+                    dlog?.verbose(log:.note,"prefillDebugUsersDataIfNeeded: error creating DEBUG user, code: \(code) error:\(String(reflecting: error))")
+                }
+            }
+            
+            if let user = user {
+                _ = try await self.dbCreateUserLoginInfo(db: db, user: user, pii: pii2, permissionGiver: prefiller)
+            }
+        }
+    }
+    
     func prefillAdminUsersData(db:Database, user prefillUser:AppUser? = nil) async throws {
         
         dlog?.verbose("prefillAdminUsersData(app:user:\(prefillUser?.displayName ?? "<nil>" )")
@@ -59,12 +109,12 @@ extension UserController /* +Prefill */ {
                 
                 switch code {
                 case AppErrorCode.db_already_exists.rawValue:
-                    dlog?.info("prefillAdminUsersData user [\(piiUserDisplayName)] already exists")
+                    dlog?.fail("prefillAdminUsersData user [\(piiUserDisplayName)] already exists")
                 case AppErrorCode.user_invalid_username.rawValue,
                     AppErrorCode.user_login_failed_user_name.rawValue,
                     AppErrorCode.user_login_failed_user_not_found.rawValue:
                     // User does not exist:
-                    dlog?.info("prefillAdminUsersData user [\(piiUserDisplayName)] does not exist:")
+                    dlog?.fail("prefillAdminUsersData user [\(piiUserDisplayName)] does not exist:")
                 default:
                     dlog?.verbose(log:.note,"prefillAdminUsersData: error creating user, code: \(code) error:\(String(reflecting: error))")
                 }

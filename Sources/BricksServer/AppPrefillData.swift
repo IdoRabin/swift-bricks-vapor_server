@@ -39,7 +39,8 @@ class AppPrefillData {
         if AppPrefillData.wasPrefilled == false {
             Task {
                 do {
-                    try await AppServer.shared.users?.prefillAdminUsersData(db: db, user: nil) // PrefillAdminUsersData.prefilIfNeeded(app: app, db: db)
+                    try await AppServer.shared.users?.prefillAdminUsersData(db: db, user: nil)
+                    try await AppServer.shared.users?.prefillDebugUsersDataIfNeeded(db: db)
                     try await self.prefillRRabacDataIfNeeded(app: app, db: db)
                 } catch let error {
                     let appError = AppError(code: .db_failed_init, reason: "Failed prefillDataIfNeeded", underlyingError: error)

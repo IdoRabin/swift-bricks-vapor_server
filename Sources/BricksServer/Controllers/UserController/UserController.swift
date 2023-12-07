@@ -55,6 +55,19 @@ class UserController: AppRoutingController {
     
     // let basePath = RoutingKit.PathComponent(stringLiteral: "user")
     
+    // Semantically should be IsUserLoggedInResponse, but for order purposed (all user funcs start with User..)
+    struct UserIsLoggedInResponse : AppEncodableVaporResponse {
+        let status : HTTPStatus
+        let notes : String
+        
+        // Any params you wish about the user
+        let userInfo : [String:String]?
+        
+        var httpStatusOverride: HTTPStatus {
+            return status
+        }
+    }
+    
     struct UserLogoutResponse : AppEncodableVaporResponse {
         let user :AppUser
         let sessionStarted : Date?
@@ -106,10 +119,21 @@ class UserController: AppRoutingController {
         let noProtGroupInfo = AppRouteInfo()
         
         // Listed below are all the routing groups:
-        let groupName = basePath.description
+        let groupName = basePath.string
         
         //  = = = = Login routing group  = = = =
         // See file: UserController+Login
+        routes.group(UserPasswordAuthenticator(allowedRoles:[]),
+                     AppUser.guardMiddleware() // guards against unautorized users: assuming User implements Vapor.Authenticatable
+        ) { rprotected in
+            // "Create" does not require id because the user being crated has no id (YET):
+            rprotected.on(.POST, basePath.appending(strComp: "login"), use: login).setting(
+                productType: .apiResponse,
+                title: "login user",
+                description: "Login a user. Requires user login credentials and permissions.",
+                requiredAuth:.userPassword,
+                group: groupName)
+        }
         
         // = = = = User/s protected root commands = = = =
         routes.group(UserTokenAuthenticator(),
@@ -129,11 +153,11 @@ class UserController: AppRoutingController {
         routes.group(basePath.appending(strComp: ":id")) { usersRoutes in
             
             // === No protetions / accesstoken not needed:
-            usersRoutes.on([.GET], pathComp("isLoggedIn"), dict:noProtGroupInfo.asDict(), use: isLoggedInCheck)?.setting(
+            usersRoutes.on([.GET], "isLoggedIn".pathComps, dict:noProtGroupInfo.asDict(), use: isLoggedInCheck)?.setting(
                 productType: .apiResponse,
                 title: "is logged in test",
                 description: "Check if the user is logged in. either use /user/{uuid}/isLoggedIn or /user/me/isLoggedIn (for the user id in the bearer token / current session user) to get the login state. Requests about other users may be blocked / limited according to user roles and permissions.",
-                requiredAuth:.bearerToken,
+                requiredAuth:.none,
                 group: groupName)
             
             // === Protections / accesstoken IS needed:
@@ -144,14 +168,14 @@ class UserController: AppRoutingController {
                 
                 // User CRUD:
                 let getEndpointDesc = "returns user details. use /user/me to get the info of the currently logged-in user."
-                protected.on([.GET], pathComp(""), use: getUser)?.setting(
+                protected.on([.GET], "".pathComps, use: getUser)?.setting(
                     productType: .apiResponse,
                     title: "get user info (inferred)",
                     description: getEndpointDesc,
                     requiredAuth:.bearerToken,
                     group: groupName)
                 
-                protected.on([.GET], pathComp("get"), use: getUser)?.setting(
+                protected.on([.GET], "get".pathComps, use: getUser)?.setting(
                     productType: .apiResponse,
                     title: "get user info",
                     description: getEndpointDesc,
@@ -159,7 +183,7 @@ class UserController: AppRoutingController {
                     group: groupName)
                 
                 // Patch / Update user by id:
-                protected.on([.PATCH], pathComp("update"), use: updateUser)?.setting(
+                protected.on([.PATCH], "update".pathComps, use: updateUser)?.setting(
                     productType: .apiResponse,
                     title: "update user info",
                     description: "Update the user with new info - note properties not appearing in the PATCH body will not be zeroed or nilled but persis their current value/s.",
@@ -167,7 +191,7 @@ class UserController: AppRoutingController {
                     group: groupName)
                 
                 // Logout user by id:
-                protected.on([.POST, .GET], pathComp("logout"), use: logout)?.setting(
+                protected.on([.POST, .GET], "logout".pathComps, use: logout)?.setting(
                     productType: .apiResponse,
                     title: "logout user",
                     description: "logout the currently logged in user.",
@@ -186,31 +210,45 @@ class UserController: AppRoutingController {
         // We need to redirect to a user/{id}/bla:
         routes.group(basePath.appending(strComp: "me").appending(.catchall)) { userRoutes in
             let routes = userRoutes.redirects(methods: [.GET, .POST, .PATCH, .DELETE, .PUT, .OPTIONS]) { method, req in
-                if let uidStr : String = req.selfUserUUIDString, uidStr.count > 4 && uidStr.count < 48 {
-                    let pathRemainder = req.url.path.components(separatedBy: "/me/").last ?? ""
-                    let newPath = "/\(self.basePath)/\(uidStr)/\(pathRemainder)/".replacingOccurrences(ofFromTo: ["|":"_"])
+                var err : AppError? = nil
+                var uidStr : String? = req.selfUserUUIDString
+                let pathRemainder = req.url.path.components(separatedBy: "/me/").last ?? ""
+                
+                if pathRemainder.trimmingSuffixCharacters(in: .punctuationCharacters) == "isLoggedIn" {
+                    uidStr = "00000"
+                }
+                
+                if let uidStr = uidStr, uidStr.count > 4 && uidStr.count < 48 {
+                    let newPath = "/\(self.basePath.string)/\(uidStr)/\(pathRemainder)".replacingOccurrences(ofFromTo: ["|":"_"])
                     return req.wrappedRedirect(to: newPath,
-                                               type: .permanent,
+                                               type: .permanent, // redirect is cached
                                                params: [:],
                                                isShoudlForwardAllParams:true,
                                                contextStr: "UserController.boot redirecting /me/ as /self_UID/")
                 } else {
-                    dlog?.note("redirects for /me/ failed: selfUserId returned nil!")
+                    err = AppError(code: .http_stt_unauthorized,
+                                   reason: "\(self.basePath.string)/me/ redirect failed. unauthorized access denied.")
+                }
+                
+                // JIC
+                if err == nil {
+                    err = AppError(code: .http_stt_notFound,
+                                   reason: "\(self.basePath.string)/me/ redirect faild. not found.")
                 }
                 
                 // Return error response if not found the redirection
-                let errMdle = AppErrorMiddleware.convert(request: req,
-                                                         error: Abort(.internalServerError,
-                                                                      reason: "\(self.basePath)/me/ redirect faild for an unknown reason"))
-                return errMdle
+                return AppErrorMiddleware.convert(request: req,
+                                                  error: err!)
             }
             
             // Set route info for each route:
             for route in routes {
-                dlog?.verbose("boot(routes:) /me/ alias route:\(route.fullPath) method: [\(route.method.string.uppercased())] route: \(route.mnRoute)")
+                let reqAuth : MNRouteAuth = route.fullPath.hasAnyOfSuffixes(["isLoggedIn", "login"]) ? .none : .bearerToken
+                dlog?.verbose("boot(routes:) /me/ alias route:\(route.fullPath) method: [\(route.method.string.uppercased())]")
                 route.setting(productType: .apiResponse,
                               title: "/me/ alias for: .." + route.path.fullPath.lastPathComponents(count: 2),
                               description: "UserController /me/ alias for \(route.method) \(route.path.fullPath.asNormalizedPathOnly())",
+                              requiredAuth: reqAuth,
                               group:groupName)
             }
         }
@@ -225,78 +263,138 @@ class UserController: AppRoutingController {
     
     // MARK: public route functions
     func logout(req: Request) async throws -> UserLogoutResponse {
-        throw Abort(.internalServerError, reason: "Unknown error has occured")
-        // TODO: Reimplement!
-//        // 401 Unauthorized - use when access token is missing or wrong
-//        // 403 Forbidden - use when access token exists and is valid, but the permissions / role does not allow this operation
-//
-//        // logout User
-//        let selfUser : User? = req.selfUser // (isTryDeepQuery:true)
-//        guard let selfUser = selfUser else {
-//            throw Abort(.badRequest, reason: "logout failed - user not found")
-//        }
-//
-//        let permission = UserMgr.shared.isAllowed(for: selfUser, to: .logoutUser, on: selfUser, during: req)
-//        if permission.isSuccess {
-//            // try await UserMgr.getAccessToken(request: req, user: selfUser)
-//            // let accessToken = try await UserMgr.getAccessToken(request: req, user: selfUser)
-//
-//        } else {
-//            throw permission.errorValue ?? Abort(.forbidden, reason: "logout failed - user is not allowed to logout");
-//        }
-////        guard permission.isSuccess else {
-//        /// .... ??? ?? ? ?? TODO: What was here
-////        return UserLogoutResponse{
-////        user:
-////        }
-//        throw Abort(.internalServerError, reason: "logout failed for an unknown reason")
+        // 401 Unauthorized - use when access token is missing or wrong
+        // 403 Forbidden - use when access token exists and is valid, but the permissions / role does not allow this operation
+
+        let accessToken = try await req.getAccessToken(context: "UserController.logout(req:)")
+        // logout User
+        let selfUser : AppUser? = req.selfUser ?? accessToken?.$user.wrappedValue
+        
+        guard let selfUser = selfUser else {
+            throw Abort(.badRequest, reason: "logout failed - user not found")
+        }
+        
+        // Clear access token and
+        var loginInfo = accessToken?.loginInfo
+        if loginInfo == nil {
+            try await accessToken?.forceLoadAllPropsIfNeeded(vaporRequest: req)
+            loginInfo = accessToken?.loginInfo
+        }
+        
+        if Debug.IS_DEBUG {
+            if loginInfo == nil {
+                dlog?.note("loginInfo was not found for logout!")
+            }
+            if accessToken == nil {
+                dlog?.note("accessToken was not found for logout!")
+            }
+        }
+        
+        
+        let now = Date.now
+        loginInfo?.isLoggedIn = false
+        accessToken?.setWasUsedNow(now: now)
+        try await loginInfo?.save(on: req.db)
+        try await accessToken?.save(on: req.db)
+        
+        // Save to req store
+        req.saveToReqStore(key: ReqStorageKeys.accessToken, value: nil, alsoSaveToSession: true)
+        req.saveToReqStore(key: ReqStorageKeys.selfUser, value: nil, alsoSaveToSession: true)
+        req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: nil, alsoSaveToSession: true)
+        req.saveToReqStore(key: ReqStorageKeys.loginInfos, value: nil, alsoSaveToSession: true)
+        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfoID, value: nil, alsoSaveToSession: true)
+        
+        let sessionStartDate : Date? = req.routeContext?.sessionStartDate ?? accessToken?.loginInfo?.latestLoginDate
+        return UserLogoutResponse(user:selfUser, sessionStarted: sessionStartDate)
     }
     
-    func isLoggedInCheck(req: Request) throws -> String {
-        throw Abort(.internalServerError, reason: "Unknown error has occured")
-        // TODO: Reimplement!
-//        let IS_RETURNS_USERID = Debug.IS_DEBUG
-//        let accessToken = req.accessToken // getAccessToken(context:"UserController.isLoggedInCheck")
-//        var userUUIDStr : String? = accessToken?.userUIDString
-//
-//        var params : [String:String] = [
-//            "user_is_logged_in" : "false",
-//        ]
-//
-//        if let selfUser = req.selfUser, let selfUserUUIDStr = req.selfUserUUIDString { // getSelfUser(isTryDeepQuery:false) {
-//            if userUUIDStr == nil {
-//                userUUIDStr = selfUser.buid?.uuidString
-//            } else if userUUIDStr != selfUserUUIDStr {
-//                dlog?.warning("accessToken USER UUID != selfUser.UUID")
-//            }
-//            params["username"] = selfUser.username
-//            params["username_type"] = selfUser.username
-//            params["user_domain"] = selfUser.userDomain
-//            params["user_is_logged_in"] = "true"
-//        }
-//
-//        if IS_RETURNS_USERID && userUUIDStr != nil {
-//            // Optional return value
-//            params["debug_found_userid"] = userUUIDStr
-//        }
-//
-//        if let result = params.serializeToJsonString(isForRemote: true, prettyPrint: Debug.IS_DEBUG), result.count > 0 {
-//            return result
-//        } else {
-//            throw Abort(.internalServerError, reason: "isLoggedInCheck failed for unknown reason")
-//        }
+    func isLoggedInCheck(req: Request) async throws -> UserIsLoggedInResponse {
+        var result : HTTPStatus = .unauthorized
+        var notes = "User is not logged in / missing credentials / user unauthorized."
+        
+        var params : [String:String] = [:]
+        let userController = req.application.appServer?.users
+        var selfUser = req.selfUser
+        if selfUser == nil {
+            do {
+                selfUser = try await userController?.getUser(request: req)
+            } catch let error {
+                dlog?.verbose(log:.note, "userController.getUser for: \(req.url.string) failed! error: \(error)")
+            }
+        }
+        
+        if let selfUser = selfUser, let selfUserUUIDStr = req.selfUserUUIDString {
+            try await selfUser.forceLoadAllPropsIfNeeded(db: req.db) // JIC
+            
+            // Params to return even when not logged in
+            params["display_name"] = selfUser.displayName
+            if Debug.IS_DEBUG {
+                params["debug_user_uid"] = selfUserUUIDStr
+            }
+            
+            var loginInfo : MNUserLoginInfo? = req.getFromReqStore(key: ReqStorageKeys.loginInfos, getFromSessionIfNotFound: true)
+            var accessToken : MNAccessToken? = req.getFromReqStore(key: ReqStorageKeys.accessToken, getFromSessionIfNotFound: true)
+            
+            // Fallbacks:
+            if accessToken == nil && loginInfo != nil {
+                accessToken = loginInfo?.accessToken
+            } else if accessToken != nil && loginInfo == nil {
+                loginInfo = accessToken?.loginInfo
+            }
+            if loginInfo == nil {
+                loginInfo = selfUser.bestLoggedInInfo
+                accessToken = loginInfo?.accessToken
+            }
+            
+            if let info = loginInfo, let accessToken = accessToken {
+                params["debug_username"] = info.userPII?.piiString ?? "?"
+                params["debug_username_type"] = info.userPII?.piiType.displayName ?? "?"
+                params["debug_user_domain"] = info.userPII?.piiDomain ?? "?"
+                
+                if Debug.IS_DEBUG {
+                    params["access_token_id"] = accessToken.id?.uuidString ?? "?"
+                    params["login_info_id"] = loginInfo?.id?.uuidString ?? "?"
+                }
+                if accessToken.isExpired {
+                    notes = "access token has expired"
+                    result = .unauthorized
+                } else if !accessToken.isValid {
+                    notes = "access token is not valid"
+                    result = .unauthorized
+                } else if info.isLoggedIn {
+                    notes = "logged in"
+                    result = .ok
+                }
+            }
+            
+            if MNModelStatus.allLoginAlowingCases.contains(selfUser.status) {
+                notes = "User status does not allow logging in: authorization / status - forbidden"
+                result = .unauthorized
+            }
+            
+            // Result params
+            if result != .ok && !Debug.IS_DEBUG {
+                // Does not return params when not logged in or debug mode
+                params = [:]
+            }
+        }
+
+        return UserIsLoggedInResponse(status: result, notes: notes, userInfo:params.count > 0 ? params : nil)
     }
     
     // GET /users/:id
     func getUser(request: Request) async throws -> AppUser {
-        throw Abort(.internalServerError, reason: "Unknown error has occured")
-        // TODO: Reimplement!
-//        let selfUser : User? = request.getSelfUser(isTryDeepQuery:false)
-//        var result : User? = nil
-//
-//        let id = request.anyParameters(forKeys: ["id", "userid"]).first?.value
-//        var username = request.anyParameters(forKeys: ["username", "user", "user name", "name"]).first?.value
-//
+        dlog?.note("UserController.getUser(request:) REIMPLEMENT!")
+//        let selfUser : AppUser? = request.selfUser // self.getSelfUser(isTryDeepQuery:false)
+        var result : AppUser? = nil
+//        
+//        var id : UUID? = request.selfUserUUID ?? REQUES
+//        if let idVal : String = request.anyParameters(forKeys: ["id", "userid", "user_id"]).first?.value {
+//            id = UUID(String(stringLiteral: idVal))
+//        }
+//        
+//        var username : String? = request.anyParameters(forKeys: ["username", "user", "user name", "name", "user_name"]).first?.value
+        
 //        // This allows sending "username" instead of id in the GET requests
 //        if request.method == .GET &&
 //
@@ -328,11 +426,13 @@ class UserController: AppRoutingController {
 //            return try await request.eventLoop.makeFailedFuture(Abort(.notFound, reason: "user not found. userid or username not found in request parameters.")).get()
 //        }
 //
-//        guard let result = result else {
-//            // http status .204
-//            throw Abort(.dataNotFound, reason:"user nor found")
-//        }
-//        return result
+        guard let result = result else {
+            // http status .204 noContent
+            throw Abort(.dataNotFound, reason: "user nor found")
+        }
+        
+        dlog?.note("\(self.name) getUser(request: Request) \(request.url.string)")
+        return result
     }
     
     // POST /users/create

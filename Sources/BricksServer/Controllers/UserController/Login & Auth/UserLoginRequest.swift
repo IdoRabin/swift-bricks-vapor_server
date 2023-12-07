@@ -34,7 +34,7 @@ public struct UserLoginRequest : Content, JSONSerializable { // todo: , UserLogi
     public init(username:String, userPassword:String, userDomain: String? = nil, rememberMe:RememberMeType = .forgetMe, usernameType:MNUserPIIType? = nil) {
         self.username = username
         self.userPassword = userPassword
-        self.userDomain = userDomain ?? Self.USER_DOMAIN_EMPTY
+        self.userDomain = MNDomains.sanitizeDomain(userDomain ?? Self.USER_DOMAIN_EMPTY)
         self.rememberMe = rememberMe
         if username.count > 0 {
             self.usernameType = usernameType ?? MNUserPIIType.detect(string: username) ?? .name
@@ -99,11 +99,14 @@ public struct UserLoginRequest : Content, JSONSerializable { // todo: , UserLogi
         } else {
             self.usernameType = MNUserPIIType.detect(string: self.username) ?? .name
         }
+        
+        // Finally
+        self.userDomain = MNDomains.sanitizeDomain(self.userDomain)
     }
     
     public mutating func update(for req:Request) {
         if self.userDomain == UserLoginRequest.USER_DOMAIN_EMPTY {
-            self.userDomain = req.domain ?? AppServer.DEFAULT_DOMAIN
+            self.userDomain = MNDomains.sanitizeDomain(req.domain ?? AppServer.DEFAULT_DOMAIN)
         }
     }
     
@@ -117,7 +120,7 @@ public struct UserLoginRequest : Content, JSONSerializable { // todo: , UserLogi
         self.username = basicAuth.username
         self.userPassword = basicAuth.password
         self.rememberMe = RememberMeType.forgetMe
-        self.userDomain = domain
+        self.userDomain = MNDomains.sanitizeDomain(domain)
         self.usernameType = MNUserPIIType.detect(string: basicAuth.username) ?? .name
     }
 }
@@ -126,4 +129,37 @@ public struct UserLoginRequest : Content, JSONSerializable { // todo: , UserLogi
 struct UserLoginResponse : AppEncodableVaporResponse {
     let bearerToken : String
     let isNewlyRenewed : Bool
+    
+    let user_id : UUID
+    let user_display_name : String
+    let user_avatar_url_str : String?
+    
+    /// If not null, should contain a url path the client is expected to redirect to
+    let client_redirect : String?
+    
+    init(user:AppUser, bearerToken:String, isNewlyRenewed:Bool, isClientReditect:Bool) {
+        self.bearerToken = bearerToken
+        self.isNewlyRenewed = isNewlyRenewed
+        self.user_id = user.id ?? UUID.empty
+        self.user_display_name = user.displayName
+        self.user_avatar_url_str = user.avatarURLStr
+        self.client_redirect = isClientReditect ? [DashboardController.BASE_PATH].fullPath : nil
+    }
+    
+    // For forwarding and redirecting this response.
+    var asDict : [String:String] {
+        var result : [String:String] = [
+            "bearerToken" : bearerToken,
+            "isNewlyRenewed" : String(isNewlyRenewed),
+            "user_id" : user_id.uuidString,
+            "user_display_name" : user_display_name
+        ]
+        if user_avatar_url_str?.count ?? 0 > 0 {
+            result["user_avatar_url_str"] = user_avatar_url_str ?? ""
+        }
+        if client_redirect?.count ?? 0 > 0 {
+            result["client_redirect"] = client_redirect ?? ""
+        }
+        return result
+    }
 }

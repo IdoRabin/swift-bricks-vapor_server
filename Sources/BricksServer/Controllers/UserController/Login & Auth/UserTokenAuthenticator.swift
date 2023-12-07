@@ -7,213 +7,124 @@
 
 import Foundation
 import Vapor
-import JWT
+// import JWT
 import MNUtils
 import MNVaporUtils
 import FluentKit
 import DSLogger
 
-fileprivate let dlog : DSLogger? = DLog.forClass("UserTokenAuthenticator")
+fileprivate let dlog : DSLogger? = DLog.forClass("UserTokenAuthenticator")?.setting(verbose: false)
 
 // Do NOT add the middleware to all routes during Config!
 // This middleware should only be used for the login or auth routes
-
+/* TODO: Consider using a CSRF token in webpage views, and have a static CSRF token creation func in this middleware? needs to use the session id or similar as seed for the token, and allow various leaf webpages to incorporate the CSRF token and send it back when calling the API from in-webpage JS, or on webform submission. search for more up-to-date packages similar to: https://github.com/brokenhandsio/vapor-csrf */
 class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
     
-    // MARK: helper functions
-    private func checkRecievedTokenAndGetUser(bearer: BearerAuthorization, for req: Request) async throws -> AppUser {
-        throw AppError(code:.misc_failed_validation, reason: "Failed validating access token. (Not implemented)")
+    // MARK: BearerAuthenticator
+    static func updateTokenCookieName()->String {
+        if MNAccessToken.TOKEN_COOKIE_NAME == MNAccessToken.TOKEN_COOKIE_DEFAULT_NAME {
+            MNAccessToken.TOKEN_COOKIE_NAME = "X-\(AppConstants.APP_NAME.replacingOccurrences(of: .whitespaces, with: "-"))-BTOK-Cookie"
+        }
+        return MNAccessToken.TOKEN_COOKIE_NAME
     }
     
-    // MARK: BearerAuthenticator
+    // "Override" to the AsyncBearerAuthenticator default implementtion: finds "Authorize" header OR cookie!
+    public func authenticate(request: Request) async throws {
+        // dlog?.info("authenticate[REPLACED](request: \(request.method) \(request.url.string))")
+        return try await self.authenticate(forUnknownRequest: request)
+    }
+
+    /// Authenticate a request even if it is not in the middlware required order. this allows detectig if user is logged in even if not required
+    /// - Parameter req: request to authenticate
+    func authenticate(forUnknownRequest req: Vapor.Request) async throws {
+        let cookieName = Self.updateTokenCookieName()
+        dlog?.verbose(" [AUT] authenticate(forUnknownRequest:request) START")
+        var cookieStr : String? = nil
+        
+        if cookieStr == nil {
+            if let cookie = req.headers.cookie?[cookieName] {
+                cookieStr = cookie.string
+            }
+        }
+        
+        if cookieStr == nil {
+        loop: for quads in [("Cookie", ";", "=", cookieName),("Authorization"," ", " ", "Bearer")] {
+                for cookie in req.headers[quads.0] {
+                    let parts = cookie.components(separatedBy: quads.1)
+                    for part in parts {
+                        let kv = part.split(separator: quads.2, maxSplits: 1)
+                        if kv[0] == cookieName, kv.count == 2, kv[1].count > 0 && kv[1].count < 256 {
+                            cookieStr = String(kv[1])
+                            dlog?.verbose(" [AUT] authenticate(forUnknownRequest:request) access token found in header: [\(quads.1)]")
+                            break loop
+                        }
+                    }
+                }
+            }
+        }
+
+        if let cookieStr = cookieStr {
+            let bearerToken = BearerAuthorization(token: cookieStr)
+            dlog?.verbose(log: .success, " [AUT] authenticate(forUnknownRequest:request) access token found")
+            return try await self.authenticate(bearer: bearerToken, for: req)
+        } else {
+            dlog?.note(" [AUT] authenticate(forUnknownRequest:request) access token not found")
+        }
+    }
+    
+    // MARK: AsyncBearerAuthenticator
     func authenticate(bearer: Vapor.BearerAuthorization, for req: Vapor.Request) async throws {
         guard bearer.token.count > 4 else {
             throw Abort(.unauthorized, reason: "malformed / short bearer token")
         }
             
-        dlog?.info(" [AUT] authenticate(barer:for:request) start")
+        dlog?.verbose(" [AUT] authenticate(barer:for:request) START for bearer: \(bearer.token)")
         
         if bearer.token.hasSuffix(AppConstants.ACCESS_TOKEN_SUFFIX) {
-            // Legacy: return req.eventLoop.makeSucceededFuture(())
-            // TODO: Why?
+            dlog?.warning(" [AUT] bearer.token has ACCESS_TOKEN_SUFFIX!! return!")
             return
         }
         
-        let user = try await self.checkRecievedTokenAndGetUser(bearer: bearer, for: req)
-        dlog?.todo(" [AUT] authenticate(barer:for:request) TODO Reimplement!")
+        guard let foundAccessToken = try await AppAccessToken.find(bearerToken: bearer.token, for: req) else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found")
+        }
+        guard let foundUser = foundAccessToken.user else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "user not found".mnDebug(add: "recvdAccessToken userUIDString: \(foundAccessToken.userUIDString.descOrNil)"))
+        }
+
+        // Load required info:
+        // Should have been done already JIC
+        try await foundAccessToken.forceLoadAllPropsIfNeeded(vaporRequest: req)
+        try await foundUser.forceLoadAllPropsIfNeeded(db: req.db)
         
-//        case .success(let user):
-//            dlog?.info(" [AUT]     WILL checkUserAndValidateSavedToken")
-//            let userResult = self.checkUserAndValidateSavedToken(user:user, for: req)
-//                .flatMap { res in
-//                //dlog?.info(" [AUT]     DID checkUserAndValidateSavedToken res:\(res)")
-//                switch res {
-//                case .failure(let err):
-//                    dlog?.fail(   " [AUT]     DID makeFailedFuture --0")
-//                    return req.eventLoop.makeFailedFuture(err)
-//                case .success:
-//                    //dlog?.success(" [AUT]     DID makeSucceededVoidFuture!")
-//                    return req.eventLoop.makeSucceededVoidFuture()
-//                }
-//            }
-//        case .failure(let error):
-//            dlog?.info(" [AUT]     WILL checkUserAndValidateSavedToken")
-//            throw error
-//        }
+        // Check user state
+        guard MNModelStatus.allLoginAlowingCases.contains(foundUser.status) else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "user cannnot resume session".mnDebug(add: "foundUser.status: \(foundUser.status.rawValue)"))
+        }
+        
+        guard !foundAccessToken.isExpired else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "token is expired".mnDebug(add: " token id: \(foundAccessToken.id?.uuidString ?? "<nil>") expiration date: \(foundAccessToken.expirationDate)"))
+        }
+        
+        guard foundAccessToken.isValid else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "token is curropt".mnDebug(add: " token id: \(foundAccessToken.id?.uuidString ?? "<nil>")"))
+        }
+        
+        guard foundAccessToken.$loginInfo.id != nil else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "token login info not found")
+        }
+        
+        // Save user details:
+        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfoID, value: foundAccessToken.$loginInfo.id!.uuidString, alsoSaveToSession:true)
+        req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: foundUser.id!.uuidString, alsoSaveToSession:true)
+        req.saveToReqStore(key: ReqStorageKeys.selfUser, value: foundUser, alsoSaveToSession:true)
+        req.saveToReqStore(key: ReqStorageKeys.selfAccessToken, value: foundAccessToken, alsoSaveToSession:true)
+        req.auth.login(foundUser) // save in session
+        
+        // Save info:
+        foundAccessToken.setWasUsedNow(isSaveOnDB: req.db, now: nil) // set last updated date.
+        
+        dlog?.success("authenticate(bearer:) AT ID: \(foundAccessToken.id.descOrNil) user: \(foundUser.displayName)")
     }
     
 }
-/*
-    private func checkRecievedTokenAndGetUser(bearer: BearerAuthorization, for req: Request) async throws->MNResult<AppUser> {
-
-        let isAllowsExpiredToken = (req.storage[ReqStorageKeys.userTokenCreateIfExpired] == true)
-        
-        var recvdAccessToken : MNAccessToken
-        
-        do {
-            recvdAccessToken = try MNAccessToken(bearerToken:bearer.token,
-                                                 allowExpired: true) // isAllowsExpiredToken bool flag is checked in the following blocks, so no need fotr the init to raise an exception
-        } catch let error {
-            dlog?.note("Access token EXPIRED: creating an accessToken failed with error: \(error.description) isAllowsExpiredToken:\(isAllowsExpiredToken)")
-        }
-        
-        let willMakeNewToken = (req.storage[ReqStorageKeys.userTokenMakeIfMissing] == true) && (bearer.token == "")
-
-        let willRenewToken =  isAllowsExpiredToken &&
-                              recvdAccessToken.isExpired
-        
-        if willMakeNewToken || willRenewToken {
-            dlog?.info("Access token expired/missing, but request allows recreation")
-        } else if !recvdAccessToken.isEmpty || !recvdAccessToken.isValid {
-            
-        } else if recvdAccessToken.isExpired && !isAllowsExpiredToken  {
-            var reason = "Cannot execute: [\(req.url.path)]. Access token expired [UA]"
-            if Debug.IS_DEBUG {
-                reason += " \(recvdAccessToken.description)"
-            }
-            throw Abort(.unauthorized, reason: reason)
-        }
-
-        let promise = req.eventLoop.makePromise(of: Result<AppUser, Error>.self)
-        
-        // recvdAccessToken.user.load(on: req.db).whenComplete { res in
-//            if let user = recvdAccessToken.$user.value, res.isSuccess {
-//
-//                // Store in request until we return a response:
-//                req.saveToSessionStore(selfUser: user, selfAccessToken: recvdAccessToken)
-//                recvdAccessToken.wasUsedNow() // set last updated date.
-//                promise.succeed(.success(user))
-//            } else { // res.isFailure
-//                dlog?.note("checkRecievedTokenAndGetUser user was not found for id:\(recvdAccessToken.$user.$id.queryableValue().descOrNil)")
-//                req.saveToSessionStore(selfUser: nil, selfAccessToken: nil)
-                
-                // Fallback tries to get user by id or name from params
-//                promise.completeWithTask {[recvdAccessToken] in
-//                    // Eithr throw or assumes completed successfullt
-//                    var user : User? = nil
-//                    if let userid = req.anyParameters(forKeys: ["userid"]).first?.value, let uid = UserUID(uuidString: userid) {
-//                        user = try await UserMgr.shared.get(db: req.db, userid: uid, selfUser: nil)
-//                        dlog?.successOrFail(condition: user != nil, "finding user by id from param 'userid'")
-//                    }
-//
-//                    if user == nil, let username = req.anyParameters(forKeys: ["username"]).first?.value {
-//                        user = try await UserMgr.shared.get(db: req.db, username: username, selfUser: nil)
-//                        dlog?.successOrFail(condition: user != nil, "finding user by user name from param 'username'")
-//                    }
-//
-//                    if let user = user {
-//                        req.saveToSessionStore(selfUser: user, selfAccessToken: recvdAccessToken)
-//                        promise.succeed(.success(user))
-//                        do {
-//                            try await recvdAccessToken.save(on: req.db).get()
-//                        } catch (let error) {
-//                            throw error
-//                        }
-//                        return .success(user)
-//                    } else {
-//                        switch res {
-//                        case .success:
-//                            // UsrId stored inside the recvdAccessToken (bearerToken) is wrong or missing
-//                            throw Abort(.unauthorized, reason: "no such user or provided access token points to unknown / deleted user. Or access token revoked.")
-//                        case .failure(let err):
-//                            throw err
-//                        }
-//                    }
-//                }
-//            }
-//        }
-        
-        return .failure(code: .db_failed_query, reason:"Failed validating access token. TODO: Implement checkRecievedTokenAndGetUser..")
-    }
-    */
-/*
-    private func checkUserAndValidateSavedToken(user:AppUser, for req: Request) async ->AppResult<MNAccessToken> {
-        guard let uuid : UUID = user.$id.value else {
-            // user loaded without a uuid
-            let msg = "failed user - loaded without a uuid!"
-            return .failure(code: .db_failed_load, reason: msg,
-                            underlyingError: Abort(.unauthorized, reason: msg))
-        }
-
-//        let result = MNAccessToken.query(on: req.db).filter(\.$user.$id == uuid).first()
-//        return result.flatMapThrowing { accessToken in
-//            if let accessToken = accessToken {
-//                // Validare the saved access token:
-//                return .success(accessToken.isExpired == false)
-//            } else {
-//                throw Abort(.unauthorized, reason: "the given access token's user is unknown")
-//            }
-//        }
-    }
-    */
-
-/*
-    func authenticate(bearer: BearerAuthorization, for req: Request) -> EventLoopFuture<Void> {
-        
-        // "/users/8A557844-6339-4CDF-89C2-4D354334B57D"
-//        let loginEx = UserMgr.shared.isRequestMakesToken(request: req)
-//        UserMgr.shared.updateStorageForMakingToken(request: req,
-//                                                   makeIfMissing: loginEx.makeIfMissing,
-//                                                   renewIfExpired: loginEx.renewIfExpired)
-//
-//        // dlog?.info(" [AUT] authenticate(barer:for:request) start")
-//
-//        guard bearer.token.count > 4 else {
-//            return req.eventLoop.makeFailedFuture(Abort(.unauthorized, reason: "malformed / short bearer token"))
-//        }
-//
-//        if bearer.token.hasSuffix(AppConstants.ACCESS_TOKEN_SUFFIX) {
-//            return req.eventLoop.makeSucceededFuture(())
-//        }
-//        do {
-//            //dlog?.info(" [AUT] WILL checkRecievedTokenAndGetUser")
-//            let getUsr = try self.checkRecievedTokenAndGetUser(bearer: bearer, for: req)
-//            return getUsr.futureResult.flatMap({ result in
-//                //dlog?.info(" [AUT] DID checkRecievedTokenAndGetUser result: \(result)")
-//                switch result {
-//                case .success(let user):
-//                    //dlog?.info(" [AUT]     WILL checkUserAndValidateSavedToken")
-//                    return self.checkUserAndValidateSavedToken(user:user, for: req).flatMap { res in
-//                        //dlog?.info(" [AUT]     DID checkUserAndValidateSavedToken res:\(res)")
-//                        switch res {
-//                        case .failure(let err):
-//                            dlog?.fail(   " [AUT]     DID makeFailedFuture --0")
-//                            return req.eventLoop.makeFailedFuture(err)
-//                        case .success:
-//                            //dlog?.success(" [AUT]     DID makeSucceededVoidFuture!")
-//                            return req.eventLoop.makeSucceededVoidFuture()
-//                        }
-//                    }
-//                case .failure(let err):
-//                    dlog?.fail(   " [AUT]   DID makeFailedFuture --1")
-//                    return req.eventLoop.makeFailedFuture(err)
-//                }
-//            })
-//        } catch let err {
-//            dlog?.fail(   " [AUT]   DID makeFailedFuture --2: \(err.description)")
-//            return req.eventLoop.makeFailedFuture(err)
-//        }
-    }
-    
-}
-*/

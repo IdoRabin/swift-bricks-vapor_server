@@ -16,6 +16,7 @@ const maxTextSze = 64;
 
 // On loading
 const onLoad = function(e) {
+    
     btnSubmit.disabled = true;
     
     var isRememberedMe = localStorage.getItem(STORAGE_REMEMBER_ME_KEY);
@@ -92,6 +93,27 @@ const saveStateInStorage = function() {
     }
 }
 
+const saveLoginResult = function(success, json) {
+    if (success) {
+        // BEARER TOKEN IS SAVED AS A COOKIE! it is safer NOT to store it in the localstorage
+        // localStorage.setItem('bearer_token', json["bearer_token"]);
+
+        localStorage.setItem('user_display_name', json["user_display_name"]);
+        localStorage.setItem('user_id', json["user_id"]);
+        localStorage.setItem('user_avatar_url_str', json["user_avatar_url_str"]);
+
+        // expected to have a "Set-Cookie" response header for a cookie named "X-Bricks Server-Cookie"
+    } else {
+        localStorage.removeItem['bearer_token'];
+        localStorage.removeItem['user_display_name'];
+        localStorage.removeItem['user_id'];
+        localStorage.removeItem['user_avatar_url_str'];
+
+        // Clear cookie as well
+        cookies.remove('X-Bricks-Server-Cookie', { domain: window.location.hostname});
+    }
+}
+
 function updateControlForMessage(inputId, labelId, msg) {
     const input = document.getElementById(inputId);
     const label = document.getElementById(labelId);
@@ -111,6 +133,8 @@ function updateControlForMessage(inputId, labelId, msg) {
             // Hide
             newClass.replace("is-invalid", "");
         }
+        if (msg == "success") { newClass = ""; }
+        
         // console.log(">>> " + inputId + " classname = [" + input.className + "]");
         input.className = newClass;
     }
@@ -138,6 +162,9 @@ function updateUIForMessage(code, msg) {
     // updateControlsForMessages(usrname, pwdmsg, general)
     console.log("|| code " + code + " message: " + msg)
     switch (appError.key) {
+    case AppErrorCode.http_stt_ok.code:
+        updateControlsForMessages("", "", "success");
+
     case AppErrorCode.user_login_failed.code:
             updateControlsForMessages("", "", msg ?? appError.reasonPhrase);
             break;
@@ -210,7 +237,7 @@ const submitHandler = function(e) {
         // Peform the login:
         // POST Url request: (no redirect)
         var statusCode = 200;
-        fetch("requestLogin", {
+        fetch("login", {
         method: "POST", // or 'PUT'
         headers: headers,
         body: JSON.stringify(data),
@@ -220,9 +247,29 @@ const submitHandler = function(e) {
             return response.json();
         }).then(function(json) {
             console.log("json", json);
-            updateUIForMessage(statusCode, json["error_reason"]);
+            var isSuccess = false;
+            if (statusCode == 200 || (statusCode >= 300 && statusCode <= 400)) {
+                setUIEnabled(false); // locks UI until redirect?
+                isSuccess = true;
+            } else {
+                updateUIForMessage(statusCode, json["error_reason"]);
+                setUIEnabled(true);
+            }
+
+            // Save locally the username, user id and user avatar URL:
+            saveLoginResult(isSuccess, json)
+
+            if (json["client_redirect"]) {
+                // client_redirect contains the string URL to redirect to
+                console.log("will redirect to:" + json["client_redirect"]);
+                window.location.href = json["client_redirect"];
+            } else {
+                // RELOAD?
+            }
+
         }).catch((ex) => {
             console.log('parsing JSON failed', ex);
+            updateUIForMessage(statusCode, ex);
             setUIEnabled(true);
         });
     } else {

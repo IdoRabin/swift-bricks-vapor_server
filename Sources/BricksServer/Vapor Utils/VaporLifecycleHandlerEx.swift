@@ -8,15 +8,12 @@
 import Foundation
 import Vapor
 
+// NOTE: LifecycleHandler requires implementor to be @Sendable
 protocol LifecycleBootableHandler : LifecycleHandler {
     func boot(_ app: Vapor.Application) throws
-    //deprecated: Use didBoot! (see LifecycleHandler)
-    //    func afterBoot(_ app: Vapor.Application)
 }
 
+// NOTE: LifecycleHandler requires implementor to be @Sendable
 extension LifecycleBootableHandler {
     func boot(_ app: Vapor.Application) throws {}
-    
-    //deprecated: Use didBoot! (see LifecycleHandler)
-    //     func afterBoot(_ app: Vapor.Application) { }
 }

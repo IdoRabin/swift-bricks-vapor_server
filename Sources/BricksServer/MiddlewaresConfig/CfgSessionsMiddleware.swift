@@ -23,7 +23,7 @@ extension AppConfigurator {
         }
         
         // === Sessions record? Session middleware ===
-        app.sessions.configuration.cookieName = "X-\(AppConstants.APP_NAME)-Cookie"
+        app.sessions.configuration.cookieName = "X-\(AppConstants.APP_NAME.replacingOccurrences(of: .whitespaces, with: "-"))-Cookie"
         //   app.sessions.use(.fluent) // SESSION DRIVER: Uses the db for the session mapping
         //   app.sessions.use(.redis) // SESSION DRIVER: Uses redis for the session mapping
         app.sessions.use(.memory) // SESSION DRIVER: Use in-memory for session mapping
@@ -40,7 +40,6 @@ extension AppConfigurator {
     @Sendable
     fileprivate func sessionCookieFactory (_ sessionID:SessionID) -> HTTPCookies.Value {
         // note: see also ...configuration.cookieName ..
-        // TODO: Check if @Sendable requise NOT using self.init
-        return .init(string: sessionID.string, isSecure: true)
+        return .init(string: sessionID.string, isSecure: false)
     }
 }

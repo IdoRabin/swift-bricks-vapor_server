@@ -1,3 +1,5 @@
+/* <!-- in addition to Bootstrap CSS --> */
+
 :root {
     /*    // peru ? tan ? wheat ? */
   --main-bg-color : #eeeeeeff;  /* light grey */
@@ -58,7 +60,7 @@ body {
 }
 
 .under-construction-ribbon-bkg {
-    background-image: url("/images/under_construction.png");
+    background-image: url("/images/web_bkgs/under_construction.png");
     background-position: left top;
     background-repeat: repeat-x;
     background-size: 54px;
@@ -75,13 +77,13 @@ body {
 }
 
 .brick-bkg-50 {
-    background-image: url("/images/bricks_v_bkg_50.jpg");
+    background-image: url("/images/web_bkgs/bricks_v_bkg_50.jpg");
     background-position: right top;
     background-size: 100%;
 }
 
 .brick-bkg {
-    background-image: url("/images/bricks_v_bkg.jpg");
+    background-image: url("/images/web_bkgs/bricks_v_bkg.jpg");
     background-position: right top;
     background-size: 100%;
 }
@@ -115,3 +117,7 @@ body {
 .rounded-5-end {
     border-radius: 0px 30px 30px 0px;
 }
+
+.nav-dropdown {
+    transform: translate3d(0px, -4px, 0px) !important;
+  }

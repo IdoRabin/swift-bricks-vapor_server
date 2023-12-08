@@ -1,3 +1,4 @@
+#export("Avatar"):
 <a class="nav-link dropdown-toggle link-light mb-0" 
     href="#" id="AvatarDropdownMenu" 
     role="button" 
@@ -25,5 +26,4 @@
         <li><a class="dropdown-item" href="/dashboard/logout">Logout..</a></li>
     </ul>
 </a>
-<!--  -->
-<!--  -->
+#endexport

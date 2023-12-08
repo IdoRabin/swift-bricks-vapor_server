@@ -1,0 +1,55 @@
+#export("tableview"):
+<div class="container-fluid text-white">
+    <div id="table_header" class="h6">
+        <h4>#(table_title)</h4>
+        #if (table_subtitle):
+            <h6>#(table_subtitle)</h6>
+        #endif
+    </div>
+    <div id="table_container" class="container">
+        <table class="table-responsive-sm table-dark table-striped table-bordered align-middle">
+            <!-- table header -->
+            <thead>
+                <tr>
+                #for(col_title in col_titles):
+                    <th scope="col">#(col_title)</th>
+                #endfor
+                </tr>
+            </thead>
+            <!-- table rows -->
+             <tbody class="table-group-divider">
+                #for(row in table_rows):
+                    <tr>
+                        #for(cell in row.cells):
+                            <td scope="cell" value="#(cell.value)">#(cell.text)</td>
+                        #endfor
+                    </tr>
+                #endfor
+            </tbody>
+        </table>
+    </div>
+    <div id="table_footer" class="d-grid gap-2 d-md-block">
+        #if (page_count) > 0:
+            <ul class="pagination pagination-sm  justify-content-center">
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">#(page_index)</a>
+                </li>
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">#(page_index + 1)</span>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">#(page_index + 2)</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+            </ul>
+        #else:
+            <p><small>Copyright #(brand_name) © 2023</small><p>
+        #endif
+    </div>
+</div>
+#endexport

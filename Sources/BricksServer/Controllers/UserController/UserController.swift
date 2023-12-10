@@ -243,8 +243,8 @@ class UserController: AppRoutingController {
             
             // Set route info for each route:
             for route in routes {
-                let reqAuth : MNRouteAuth = route.fullPath.hasAnyOfSuffixes(["isLoggedIn", "login"]) ? .none : .bearerToken
-                dlog?.verbose("boot(routes:) /me/ alias route:\(route.fullPath) method: [\(route.method.string.uppercased())]")
+                let reqAuth : MNRouteAuth = route.canonicalPath.hasAnyOfSuffixes(["isLoggedIn", "login"]) ? .none : .bearerToken
+                dlog?.verbose("boot(routes:) /me/ alias route:\(route.canonicalPath) method: [\(route.method.string.uppercased())]")
                 route.setting(productType: .apiResponse,
                               title: "/me/ alias for: .." + route.path.fullPath.lastPathComponents(count: 2),
                               description: "UserController /me/ alias for \(route.method) \(route.path.fullPath.asNormalizedPathOnly())",
@@ -304,7 +304,7 @@ class UserController: AppRoutingController {
         req.saveToReqStore(key: ReqStorageKeys.loginInfos, value: nil, alsoSaveToSession: true)
         req.saveToReqStore(key: ReqStorageKeys.selfLoginInfoID, value: nil, alsoSaveToSession: true)
         
-        let sessionStartDate : Date? = req.routeContext?.sessionStartDate ?? accessToken?.loginInfo?.latestLoginDate
+        let sessionStartDate : Date? = req.routeContext.sessionStartDate ?? accessToken?.loginInfo?.latestLoginDate
         return UserLogoutResponse(user:selfUser, sessionStarted: sessionStartDate)
     }
     

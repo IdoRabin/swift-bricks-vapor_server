@@ -74,8 +74,8 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
     var settings : AppSettings
     weak var vaporApplication : Application? = nil
     // weak var permissions : AppPermissionMiddleware? = nil
-    weak var users : UserController? = nil
-    private var _routes : MNRoutingMgr? = nil
+    weak var users : UserController? = nil // owner of this object
+    private var _routes : MNRoutingMgr? = nil // owner of this object
     public var routes : MNRoutingMgr {
         get {
             return _routes!
@@ -132,7 +132,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
     func initRouteMgrIfNeeded() {
         if self._routes == nil, let vapp = self.vaporApplication {
             // #$% two 2
-            self._routes = MNRoutingMgr(app: vapp, manager: nil)
+            self._routes = MNRoutingMgr(app: vapp)
             if globalMNRouteMgr == nil {
                 globalMNRouteMgr = routes
             }
@@ -251,7 +251,8 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         
         // Boot and make sure to Register app routes:
         let userController = UserController(app:app, manager: AppServer.shared.routes) // for use ather the route booting
-        try AppServer.shared.routes.bootRoutes(app:app, controllers: [
+        // try 
+        AppServer.shared.routes.bootRoutes(app:app, controllers: [
             userController,
             DashboardController(app: app, manager: AppServer.shared.routes),
             UtilController(app: app, manager: AppServer.shared.routes),

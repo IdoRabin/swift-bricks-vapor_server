@@ -20,6 +20,15 @@ fileprivate let dlog : DSLogger? = DLog.forClass("UserTokenAuthenticator")?.sett
 /* TODO: Consider using a CSRF token in webpage views, and have a static CSRF token creation func in this middleware? needs to use the session id or similar as seed for the token, and allow various leaf webpages to incorporate the CSRF token and send it back when calling the API from in-webpage JS, or on webform submission. search for more up-to-date packages similar to: https://github.com/brokenhandsio/vapor-csrf */
 class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
     
+    func authenticate(bearer: Vapor.BearerAuthorization, for request: Vapor.Request) async throws {
+        dlog?.todo("Reimplement UserTokenAuthenticator authenticate(bearer:...)")
+    }
+    
+    public func authenticate(request: Request) async throws {
+        dlog?.todo("Reimplement UserTokenAuthenticator authenticate(request:...)")
+    }
+    
+    
     // MARK: BearerAuthenticator
     static func updateTokenCookieName()->String {
         if MNAccessToken.TOKEN_COOKIE_NAME == MNAccessToken.TOKEN_COOKIE_DEFAULT_NAME {
@@ -28,6 +37,7 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         return MNAccessToken.TOKEN_COOKIE_NAME
     }
     
+    /*
     // "Override" to the AsyncBearerAuthenticator default implementtion: finds "Authorize" header OR cookie!
     public func authenticate(request: Request) async throws {
         // dlog?.info("authenticate[REPLACED](request: \(request.method) \(request.url.string))")
@@ -126,5 +136,5 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         
         dlog?.success("authenticate(bearer:) AT ID: \(foundAccessToken.id.descOrNil) user: \(foundUser.displayName)")
     }
-    
+*/
 }

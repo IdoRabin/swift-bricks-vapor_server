@@ -98,17 +98,19 @@ class UtilController : AppRoutingController {
             ri_login_details += ""
             ri_auth_method += ""
             
-            // Routes:
-            self.ri_routes = AppServer.shared.routes.allInfos.values.compactMap({ infoable in
-                return infoable as? MNRouteInfo
-            }).filter { info in
-                if Debug.IS_DEBUG && info.groupName?.count ?? 0 == 0 {
-                    dlog?.warning("info has no groupName! \(info.asDict().descriptionLines)")
+            // Set all routes: (dynamically)
+            let allRoutes : [MNRouteInfo] = AppServer.shared.routes.allRouteInfos().filter { info in
+                if info.fullPath?.contains(anyOf: fragmentsToFilterOut)  == true {
+                    return false
                 }
-                return !(info.fullPath?.contains(anyOf: fragmentsToFilterOut) ?? false)
-            }.groupBy { info in
-                info.groupName
-            }
+                // TODO: add filtering using permissions / RRabac
+                // Re: what the user is allowed to access / see
+                return true
+            } as! [MNRouteInfo]
+
+            self.ri_routes = allRoutes.groupBy(keyForItem: { info in
+                info.groupName ?? "NO_GROUP"
+            })
         }
     }
     

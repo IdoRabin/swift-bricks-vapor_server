@@ -13,12 +13,15 @@ import MNVaporUtils
 // This allows sublassing or extending without changing all code appearances:
 public typealias AppErrorCode = MNErrorCode
 public typealias AppErrorInt = MNErrorInt
- public typealias AppDBEnum = MNDBEnum
-public typealias AppRouteInfo = MNRouteInfo
+public typealias AppDBEnum = MNDBEnum
 public typealias AppUser = MNUser
 public typealias AppAccessToken = MNAccessToken
 public typealias AppSettable = MNSettable
- public typealias AppRouteContext = MNRouteContext
+
+public typealias AppRouteInfo = MNRouteInfo
+public typealias AppRouteContext = MNRouteContext
+public typealias AppErrorStruct = MNErrorStruct
+
 public protocol AppPermissionGiver {
     
 }

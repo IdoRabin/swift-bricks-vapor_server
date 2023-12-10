@@ -41,8 +41,8 @@ class DashboardController : AppRoutingController {
         let code = AppError.bestErrorCode(error)
         let reason = AppError.bestErrorReason(error)
         let appError = (error as? AppError) ??  AppError(code: AppErrorCode(rawValue: code)!, reason: reason)
-        let routeContext = try await MNRoutingBase.getOrCreateRouteContext(for: req)
-        routeContext.setError(req: req, err: appError, errorOrigPath: origRoute, errReqId: req.id)
+        let routeContext : MNRouteContext? = nil // XX try await MNRoutingBase.getOrCreateRouteContext(for: req)
+        routeContext?.setError(req: req, err: appError, errorOrigPath: origRoute, errReqId: req.id)
         
         if req.hasSession {
             // Reedirect
@@ -51,7 +51,7 @@ class DashboardController : AppRoutingController {
             //   case .temporary 307  Maintains original request method, ie: PUT will call PUT on redirect.
             
             // Save error and redirect to session history:
-            req.routeHistory?.update(req: req, error: appError)
+            req.routeHistory.update(req: req, error: appError)
             
             // String+PathComponents.swift OR RoutinKit.PathComponent
             return req.wrappedRedirect(to: "/\(Self.BASE_PATH)/\(Self.ERROR_PAGE_COMP)",
@@ -183,7 +183,8 @@ class DashboardController : AppRoutingController {
             // Fallback catchall:
             dashboardRoute.get(.catchall) { req in
                 dlog?.info("Dashboard catchall will throw http status 404!")
-                let _ /*routeContext*/ = try await MNRoutingBase.getOrCreateRouteContext(for: req)
+                _ = req.route?.routeInfo // init if does not exist
+                _ = req.routeContext // init if does not exist
                 return try await self.dboardRedirectToErrorPage(req, error: Abort(.notFound, reason:"Path not found!"))
             }.setting(
                 productType: .webPage,
@@ -287,7 +288,7 @@ class DashboardController : AppRoutingController {
     }
     
     func dboardPage(_ req: Request) async throws -> View {
-        let routeContext = try await self.getOrCreateRouteContext(for: req)
+        // req.routeContext.
         
         let allParams : [String:String] = [:] // req.collatedAllParams()
         if Debug.IS_DEBUG {
@@ -297,8 +298,8 @@ class DashboardController : AppRoutingController {
         }
         
         let errReqId = allParams["req"]?.removingPercentEncodingEx ?? ""
-        if let truple = req.getError(byReqId: errReqId) {
-            routeContext.setError(req:req, errorTruple: truple)
+        if let truple = req.routeHistory.getError(byReqId: errReqId) {
+            req.routeContext.setError(req:req, errorTruple: truple)
         }
         
         // Other cases
@@ -313,9 +314,9 @@ class DashboardController : AppRoutingController {
             break
         }
         
-        let futureView = req.view.render(req.url.path, routeContext)
+        let futureView = req.view.render(req.url.path, req.routeContext)
         futureView.whenComplete { result in
-            req.routeHistory?.update(req: req, result: result)
+            req.routeHistory.update(req: req, result: result)
         }
         return try await futureView.get()
     }
@@ -326,10 +327,10 @@ class DashboardController : AppRoutingController {
         await self.authenticateIfPossible(unknownReq: req)
         
         // Context
-        let routeContext = try await self.getOrCreateRouteContext(for: req)
+        let routeContext = req.routeContext
         let futureView = req.view.render("/\(basePath.string)/main", routeContext)
         futureView.whenComplete { result in
-            req.routeHistory?.update(req: req, result: result)
+            req.routeHistory.update(req: req, result: result)
         }
         return try await futureView.get()
     }
@@ -348,14 +349,14 @@ class DashboardController : AppRoutingController {
         let errReqId = allParams["req"]?.removingPercentEncodingEx ?? ""
         
         // Get latest context for the error page:
-        let routeContext = try await self.getOrCreateRouteContext(for: req)
-        if let truple = req.getError(byReqId: errReqId) {
+        let routeContext = req.routeContext
+        if let truple = req.routeHistory.getError(byReqId: errReqId) {
             routeContext.setError(req:req, errorTruple: truple)
         }
         
         let futureView = req.view.render("/\(basePath.string)/\(Self.ERROR_PAGE_COMP)", routeContext)
         futureView.whenComplete { result in
-            req.routeHistory?.update(req: req, result: result)
+            req.routeHistory.update(req: req, result: result)
         }
         return try await futureView.get()
     }

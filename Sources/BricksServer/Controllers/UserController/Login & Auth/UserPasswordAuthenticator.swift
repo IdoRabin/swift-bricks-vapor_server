@@ -110,6 +110,10 @@ class UserPasswordAuthenticator : Vapor.AsyncMiddleware {
     /// Authenticate that the username and password are in the DB and valid (user may have multiple MNUserLoginInfos, i.e logins)
     /// NOTE: Assumes req storage has .user
     func authenticate(loginRequest: UserLoginRequest, for req: Vapor.Request) async throws {
+        dlog?.todo("REIMPLEMENT authenticate(basic:) for req:\(req.id)")
+    }
+    
+    func XXXauthenticate(loginRequest: UserLoginRequest, for req: Vapor.Request) async throws {
         dlog?.info("authenticate(basic:) for req:\(req.id)")
         
         // Check server is running
@@ -166,30 +170,28 @@ class UserPasswordAuthenticator : Vapor.AsyncMiddleware {
         }
     }
     
-    public func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
-        let routeContext = try await MNRoutingBase.getOrCreateRouteContext(for: request)
-        
-        let isRequiresAuth = routeContext.requiredAuth.contains(.userPassword) == true
+    public func respond(to req: Request, chainingTo next: AsyncResponder) async throws -> Response {
+        let isRequiresAuth = req.routeContext.requiredAuth.contains(.userPassword) == true
         if isRequiresAuth {
             
             var loginRequest : UserLoginRequest? = nil
-            if let basic = request.headers.basicAuthorization {
-                loginRequest = UserLoginRequest(basicAuth: basic, domain: request.domain ?? AppServer.DEFAULT_DOMAIN)
+            if let basic = req.headers.basicAuthorization {
+                loginRequest = UserLoginRequest(basicAuth: basic, domain: req.domain ?? AppServer.DEFAULT_DOMAIN)
             }
             
             // We try to parse the body as a UserLoginRequest
-            if loginRequest == nil && request.method == .POST{
-                loginRequest = try request.content.decode(UserLoginRequest.self)
+            if loginRequest == nil && req.method == .POST{
+                loginRequest = try req.content.decode(UserLoginRequest.self)
             }
             
             if let loginRequest = loginRequest {
-                request.saveToReqStore(key: ReqStorageKeys.loginRequest, value: loginRequest)
-                try await self.authenticate(loginRequest: loginRequest, for: request)
+                req.saveToReqStore(key: ReqStorageKeys.loginRequest, value: loginRequest)
+                try await self.authenticate(loginRequest: loginRequest, for: req)
             } else {
                 throw AppError(code: .user_login_failed_bad_credentials, reason: "Login credentials malformed")
             }
         }
         
-        return try await next.respond(to: request)
+        return try await next.respond(to: req)
     }
 } // End of class

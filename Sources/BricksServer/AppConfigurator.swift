@@ -259,7 +259,7 @@ class AppConfigurator {
         // evloop.makeFailedFuture(AppError(code:.db_failed_init, reason: "Unknown asycConfigureDB init error"))
         
         let result : AppResult<String> = try evloop.submit {
-            return AppResult<String>.success("XXX")
+            return AppResult<String>.success("DB CONFIG SUCCESS \(Date.now.ISO8601Format())")
         }.wait()
         
         return result

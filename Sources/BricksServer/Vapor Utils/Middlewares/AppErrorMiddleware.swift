@@ -13,23 +13,16 @@ import MNVaporUtils
 
 fileprivate let dlog : DSLogger? = DLog.forClass("AppErrorMiddleware")
 
+
 final class AppErrorMiddleware: Middleware {
-    
-    struct AppErrorStruct : Codable {
-        var error_code : Int? = nil
-        var error_domain : String? = nil
-        var error_reason: String = "Unknown error"
-        var underlying_errors : [AppErrorStruct]?
-    }
     
     /// Structure of `AppErrorMiddleware
     internal struct AppErrorResponse: Codable, JSONSerializable {
         /// The reason for the error.
         var main_error : AppErrorStruct
-        
-        var request_path: String? = nil
-        var request_id: String? = nil
-        var request_selfuser_id: String? = nil
+        var request_path: String? = nil  // For use with server requests
+        var request_id: String? = nil // For use with server requests
+        var request_selfuser_id: String? = nil  // For use with server requests
         
         static func errorToStruct(error:Error, isRecurseDownTree:Bool = true, depth: Int = 0)-> AppErrorStruct {
             guard depth < 32 else {
@@ -41,32 +34,35 @@ final class AppErrorMiddleware: Middleware {
                 result = AppErrorStruct(error_code: Int(abortError.status.code),
                                         error_domain: MNDomains.sanitizeDomain("com.Vapor.AbortError"),
                                         error_reason: abortError.reason)
+                if isRecurseDownTree {
+                    let errs = (abortError as NSError).underlyingErrors
+                    if errs.count > 0 {
+                        result.update(underlyingErrors: errs)
+                    }
+                }
             } else if let appError = error as? AppError {
                 result = AppErrorStruct(error_code: appError.code,
                                         error_domain: MNDomains.sanitizeDomain(appError.domain),
                                         error_reason: appError.reasonsLines ?? "Unknown error")
-                if isRecurseDownTree {
-                    let errs = appError.underlyingErrorsCollated()?.map({ mnError in
-                        return errorToStruct(error: mnError, isRecurseDownTree: /* NOTE:*/ false, depth : 0)
-                    })
-                    result.underlying_errors = (errs?.count ?? 0 > 0) ? errs : nil
+                if isRecurseDownTree, let underlying = appError.underlyingErrorsCollated(), underlying.count > 0 {
+                    result.update(underlyingMNErrors: underlying)
                 }
                 
-            } else if let nsError = (error as? NSError) {
+            } else {
+                let nsError = (error as NSError) // cast always succeeds
                 result = AppErrorStruct(error_code: nsError.code,
                                         error_domain: MNDomains.sanitizeDomain(nsError.domain),
                                         error_reason: nsError.reason)
-                let errs = nsError.underlyingErrors.map({ mnError in
-                    return errorToStruct(error: mnError, isRecurseDownTree: /* NOTE:*/ false, depth : 0)
-                })
-                
-                result.underlying_errors = (errs.count > 0) ? errs : nil
-            } else {
+                let errs = nsError.underlyingErrors
+                if errs.count > 0 {
+                    result.update(underlyingErrors: errs)
+                }
+            } /*else {
                 // Any old error...
                 result = AppErrorStruct(error_code: Int(HTTPStatus.internalServerError.code),
                                         error_domain: MNDomains.DEFAULT_DOMAIN + ".AppError",
                                         error_reason: error.description)
-            }
+            }*/
             return result
         }
         
@@ -82,46 +78,49 @@ final class AppErrorMiddleware: Middleware {
     }
     
     static func isShouldRedirect(from req:Vapor.Request, errorResponse:AppErrorResponse)->(url:URL, type:Redirect)? {
-        var resultUrl : URL? = nil
-        var resultRedirect : Redirect = .temporary
-        let routeInfo = req.routeInfo
-        let infoPathComps : [RoutingKit.PathComponent] = routeInfo?.fullPath?.pathComponents ?? []
-        
-        // Determine according to path root and other parameters:
-        let mnErrorCode : MNErrorCode = MNErrorCode(rawValue: errorResponse.main_error.error_code ?? 0) ?? .misc_unknown
-        let basePath = infoPathComps.first?.description ?? ""
-        switch (basePath, mnErrorCode) {
-        case ("dashboard", .http_stt_unauthorized),
-             ("dashboard", .http_stt_forbidden):
-            resultUrl = URL(string: "/dashboard/login")
-        default:
-            if req.method == .GET && req.routeInfo?.productType == .webPage {
-                for lastPathComponent in ["errorpage"] {
-                    if let url = URL(string: "/\(basePath)/\(lastPathComponent)"),
-                       let errorPageInfo = req.application.appServer?.routes.routeInfo(for: .GET, fullPath: url.absoluteString),
-                       errorPageInfo.productType == .webPage {
-                        // Set prev req id as param
-                        resultUrl = url.appending(queryItems: [URLQueryItem(name: "req", value: req.requestUUIDString)])
-                    }
-                }
-            }
-        }
-        
-        // Finally:
-        if let url = resultUrl {
-            return (url:url, type:resultRedirect)
-        }
+        dlog?.todo("Reimplement isShouldRedirect")
+//        var resultUrl : URL? = nil
+//        var resultRedirect : Redirect = .temporary
+//        let routeInfo = req.routeInfo
+//        let infoPathComps : [RoutingKit.PathComponent] = routeInfo?.canonicalPath?.pathComponents ?? []
+//        
+//        // Determine according to path root and other parameters:
+//        let mnErrorCode : MNErrorCode = MNErrorCode(rawValue: errorResponse.main_error.error_code ?? 0) ?? .misc_unknown
+//        let basePath = infoPathComps.first?.description ?? ""
+//        switch (basePath, mnErrorCode) {
+//        case ("dashboard", .http_stt_unauthorized),
+//             ("dashboard", .http_stt_forbidden):
+//            resultUrl = URL(string: "/dashboard/login")
+//        default:
+//            if req.method == .GET && req.routeInfo?.productType == .webPage {
+//                for lastPathComponent in ["errorpage"] {
+//                    if let url = URL(string: "/\(basePath)/\(lastPathComponent)"),
+//                       let errorPageInfo = req.application.appServer?.routes.routeInfo(for: .GET, fullPath: url.absoluteString),
+//                       errorPageInfo.productType == .webPage {
+//                        // Set prev req id as param
+//                        resultUrl = url.appending(queryItems: [URLQueryItem(name: "req", value: req.requestUUIDString)])
+//                    }
+//                }
+//            }
+//        }
+//        
+//        // Finally:
+//        if let url = resultUrl {
+//            return (url:url, type:resultRedirect)
+//        }
         return nil
     }
     
     public static func convert(request:Request, error:any Error) -> Response {
         let appError = (error as? AppError) ?? AppError(error:error)
-        if let truple = request.getError(byReqId: request.id), let routeContext = request.routeContext {
-            routeContext.setError(req:request, errorTruple: truple)
-            request.routeHistory?.update(req: request, error: error)
-        } else {
-            dlog?.note("convert(request:error:) failed: \(request.method) \(request.url.string) has no route context / error !")
-        }
+        
+        dlog?.todo("Reimplement convert truple")
+//        if let truple = request.getError(byReqId: request.id), let routeContext = request.routeContext {
+//            routeContext.setError(req:request, errorTruple: truple)
+//            request.routeHistory?.update(req: request, error: error)
+//        } else {
+//            dlog?.note("convert(request:error:) failed: \(request.method) \(request.url.string) has no route context / error !")
+//        }
         
         // variables to determine
         let errComps = appError.headers(wasError:error)
@@ -156,7 +155,7 @@ final class AppErrorMiddleware: Middleware {
         if let redirect = isShouldRedirect(from: request, errorResponse: errorResponse), redirect.url.absoluteString != request.url.string {
             // Will redirect
             dlog?.note("error: \(error.description) redirecting to => \(redirect.url.absoluteString)")
-            request.routeHistory?.update(req: request, error: error)
+            request.routeHistory.update(req: request, error: error)
             
             response.status = redirect.type.status
             // a Location header holding the URL to redirect to.

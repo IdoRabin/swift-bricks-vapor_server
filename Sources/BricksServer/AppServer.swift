@@ -251,8 +251,7 @@ class AppServer : @unchecked Sendable, LifecycleHandler {
         
         // Boot and make sure to Register app routes:
         let userController = UserController(app:app, manager: AppServer.shared.routes) // for use ather the route booting
-        // try 
-        AppServer.shared.routes.bootRoutes(app:app, controllers: [
+        try AppServer.shared.routes.bootRoutes(app:app, controllers: [
             userController,
             DashboardController(app: app, manager: AppServer.shared.routes),
             UtilController(app: app, manager: AppServer.shared.routes),

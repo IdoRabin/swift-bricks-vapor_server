@@ -37,21 +37,23 @@ class UtilController : AppRoutingController {
             let groupName = "util"
             
             // let groupInfo = AppRouteInfo.requiresBearerToken
-            util.on([.GET], "listAllRoutes".pathComps, use: listAllRoutes)?.setting(
-                productType: .apiResponse,
-                title: "listAllRoutes",
-                description: "list all routes that this server may handle for a swagger-like summary.",
-                requiredAuth:.none,
-                group: groupName)
+            util.on([.GET], "listAllRoutes".pathComps, use: listAllRoutes)?
+                .setting(
+                    productType: .apiResponse,
+                    title: "listAllRoutes",
+                    description: "list all routes that this server may handle for a swagger-like summary.",
+                    requiredAuth:.none,
+                    group: groupName)
             
             // Will not require credentials:
             // HTTPStatus - 429 Too Many Requests (rate limiting)
-            util.on([.OPTIONS, .GET], "optionsCheck".pathComps, dict:nil, use: optionsCheck)?.setting(
-                productType: .apiResponse,
-                title: "optionsCheck",
-                description: "a specific endpoint for sending an empty OPTIONS check, to validate the server is alive. (may be used as a 'heart-beat' for clients, but there are harsh rate limits.",
-                requiredAuth:.none,
-                group: groupName)
+            util.on([.OPTIONS, .GET], "optionsCheck".pathComps, dict:nil, use: optionsCheck)?
+                .setting(
+                    productType: .apiResponse,
+                    title: "optionsCheck",
+                    description: "a specific endpoint for sending an empty OPTIONS check, to validate the server is alive. (may be used as a 'heart-beat' for clients, but there are harsh rate limits.",
+                    requiredAuth:.none,
+                    group: groupName)
         }
     }
     

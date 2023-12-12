@@ -23,7 +23,6 @@ class DashboardController : AppRoutingController {
     static let PAGE_TITLE_PREFIX = "\(AppConstants.APP_DISPLAY_NAME.capitalized) dashboard"
     static let ERROR_PAGE_COMP = "errorpage"
     static let FREE_PAGE_ROUTES      = ["about", "register", "login"] // excluded: main and errorpage. Note: login is the login page, not the login request
-    static let LOGIN_REQUEST_ROUTES     = ["requestLogin"] // requestLogin is a post or GET request, not the login webpage get request
     static let PROTECTED_PAGE_ROUTES = ["logout", "logs", "roles" , "stats" , "terms"]
     
     static let BASE_PATH = RoutingKit.PathComponent(stringLiteral: "dashboard")
@@ -158,7 +157,7 @@ class DashboardController : AppRoutingController {
                         group: groupName)
             }
                 
-            dashboardRoute.on(.GET, "logout".pathComps, use: self.logout)
+            dashboardRoute.on(.POST, "logout".pathComps, use: self.logout)
                 .setting(
                     productType: .webPage,
                     title: "Dashboard logout POST API call",
@@ -201,7 +200,9 @@ class DashboardController : AppRoutingController {
         }
         
         let logoutResult = try await users.logout(req: req)
-        return req.redirect(to: basePath.fullPath, redirectType: .temporary)
+        let response = req.redirect(to: basePath.fullPath, redirectType: .temporary)
+        dlog?.info("Logout result body: \(response.body)")
+        return response
     }
     
     func dboardLoginPage(_ req: Request) async throws {

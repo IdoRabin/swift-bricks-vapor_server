@@ -20,16 +20,9 @@ fileprivate let dlog : DSLogger? = DLog.forClass("UserTokenAuthenticator")?.sett
 /* TODO: Consider using a CSRF token in webpage views, and have a static CSRF token creation func in this middleware? needs to use the session id or similar as seed for the token, and allow various leaf webpages to incorporate the CSRF token and send it back when calling the API from in-webpage JS, or on webform submission. search for more up-to-date packages similar to: https://github.com/brokenhandsio/vapor-csrf */
 class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
     
-    func authenticate(bearer: Vapor.BearerAuthorization, for request: Vapor.Request) async throws {
-        dlog?.todo("Reimplement UserTokenAuthenticator authenticate(bearer:...)")
-    }
-    
-    public func authenticate(request: Request) async throws {
-        dlog?.todo("Reimplement UserTokenAuthenticator authenticate(request:...)")
-    }
-    
-    
-    // MARK: BearerAuthenticator
+    // MARK: Types
+    // MARK: Const
+    // MARK: Static
     static func updateTokenCookieName()->String {
         if MNAccessToken.TOKEN_COOKIE_NAME == MNAccessToken.TOKEN_COOKIE_DEFAULT_NAME {
             MNAccessToken.TOKEN_COOKIE_NAME = "X-\(AppConstants.APP_NAME.replacingOccurrences(of: .whitespaces, with: "-"))-BTOK-Cookie"
@@ -37,26 +30,23 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         return MNAccessToken.TOKEN_COOKIE_NAME
     }
     
-    /*
-    // "Override" to the AsyncBearerAuthenticator default implementtion: finds "Authorize" header OR cookie!
-    public func authenticate(request: Request) async throws {
-        // dlog?.info("authenticate[REPLACED](request: \(request.method) \(request.url.string))")
-        return try await self.authenticate(forUnknownRequest: request)
-    }
-
-    /// Authenticate a request even if it is not in the middlware required order. this allows detectig if user is logged in even if not required
-    /// - Parameter req: request to authenticate
-    func authenticate(forUnknownRequest req: Vapor.Request) async throws {
+    // MARK: Properties / members
+    // MARK: Private
+    func resolveBearer(req:Request)->Vapor.BearerAuthorization? {
+        var result : Vapor.BearerAuthorization? = nil
         let cookieName = Self.updateTokenCookieName()
-        dlog?.verbose(" [AUT] authenticate(forUnknownRequest:request) START")
-        var cookieStr : String? = nil
         
+        // Find cookie: simple way
+        var cookieStr : String? = nil
         if cookieStr == nil {
             if let cookie = req.headers.cookie?[cookieName] {
+                dlog?.info("found bearer string in cookie: [\(cookieName)]")
                 cookieStr = cookie.string
             }
         }
         
+        // Fallback: find cookie: breaking up headers "manually",
+        // NOTE: Also checking for "Authorization : Bearer {...}" header
         if cookieStr == nil {
         loop: for quads in [("Cookie", ";", "=", cookieName),("Authorization"," ", " ", "Bearer")] {
                 for cookie in req.headers[quads.0] {
@@ -65,7 +55,7 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
                         let kv = part.split(separator: quads.2, maxSplits: 1)
                         if kv[0] == cookieName, kv.count == 2, kv[1].count > 0 && kv[1].count < 256 {
                             cookieStr = String(kv[1])
-                            dlog?.verbose(" [AUT] authenticate(forUnknownRequest:request) access token found in header: [\(quads.1)]")
+                            dlog?.info("found bearer string in header [\(quads.0)] [\(quads.0)]")
                             break loop
                         }
                     }
@@ -73,12 +63,25 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
             }
         }
 
+        // Create bearer token from the cookie value
         if let cookieStr = cookieStr {
-            let bearerToken = BearerAuthorization(token: cookieStr)
-            dlog?.verbose(log: .success, " [AUT] authenticate(forUnknownRequest:request) access token found")
-            return try await self.authenticate(bearer: bearerToken, for: req)
+            result = BearerAuthorization(token: cookieStr)
+            dlog?.verbose(log: .success, " [CookieBearer] authenticate(forUnknownRequest:request) access token found")
+        }
+        
+        return result
+    }
+    
+    // MARK: Lifecycle
+    // MARK: Public
+    
+    // "Override" to the AsyncBearerAuthenticator default implementtion: finds "Authorize" header OR cookie!
+    // MARK: base Authenticator protocol override
+    public func authenticate(request: Request) async throws {
+        if let bearer = self.resolveBearer(req:request) {
+            try await self.authenticate(bearer: bearer, for: request)
         } else {
-            dlog?.note(" [AUT] authenticate(forUnknownRequest:request) access token not found")
+            dlog?.fail("authenticate(request) no bearer token found in request")
         }
     }
     
@@ -96,8 +99,9 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         }
         
         guard let foundAccessToken = try await AppAccessToken.find(bearerToken: bearer.token, for: req) else {
-            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found")
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found or not valid")
         }
+        
         guard let foundUser = foundAccessToken.user else {
             throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "user not found".mnDebug(add: "recvdAccessToken userUIDString: \(foundAccessToken.userUIDString.descOrNil)"))
         }
@@ -124,8 +128,12 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
             throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "token login info not found")
         }
         
+        guard let foundLoginInfo = foundAccessToken.loginInfo else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "login info not found".mnDebug(add: "recvdAccessToken userUIDString: \(foundAccessToken.userUIDString.descOrNil) foundAccessToken.id: \(foundAccessToken.id?.uuidString ?? "<nil>")"))
+        }
+        
         // Save user details:
-        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfoID, value: foundAccessToken.$loginInfo.id!.uuidString, alsoSaveToSession:true)
+        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfo, value: foundLoginInfo, alsoSaveToSession:true)
         req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: foundUser.id!.uuidString, alsoSaveToSession:true)
         req.saveToReqStore(key: ReqStorageKeys.selfUser, value: foundUser, alsoSaveToSession:true)
         req.saveToReqStore(key: ReqStorageKeys.selfAccessToken, value: foundAccessToken, alsoSaveToSession:true)
@@ -134,7 +142,6 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         // Save info:
         foundAccessToken.setWasUsedNow(isSaveOnDB: req.db, now: nil) // set last updated date.
         
-        dlog?.success("authenticate(bearer:) AT ID: \(foundAccessToken.id.descOrNil) user: \(foundUser.displayName)")
+        dlog?.success("authenticate(bearer:) found user: [\(foundUser.displayName)] access token: \(foundAccessToken.id.descOrNil) loginInfo: \(foundLoginInfo.id.descOrNil)")
     }
-*/
 }

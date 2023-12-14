@@ -115,8 +115,8 @@ final class AppErrorMiddleware: Middleware {
         let appError = (error as? AppError) ?? AppError(error:error)
         
         dlog?.todo("Reimplement convert truple")
-//        if let truple = request.getError(byReqId: request.id), let routeContext = request.routeContext {
-//            routeContext.setError(req:request, errorTruple: truple)
+//        if let truple = request.getError(byReqId: request.id), let route Context = request.route Context {
+//            route Context.setError(req:request, errorTruple: truple)
 //            request.routeHistory?.update(req: request, error: error)
 //        } else {
 //            dlog?.note("convert(request:error:) failed: \(request.method) \(request.url.string) has no route context / error !")

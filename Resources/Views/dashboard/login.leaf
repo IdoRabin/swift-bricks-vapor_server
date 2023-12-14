@@ -26,25 +26,60 @@
         <div class="col-7 p-0 m-0 brick-bkg-50 rounded-5-end" style="overflow:clip"/>
         <div class="p-0 m-0 h-100 brick-gradiant-whiter-50">
             <form class="m-0 p-5" autocomplete="on" onsubmit="onsubmit();">
+                
+                <!-- username field -->
                 <div class="row form-floating mb-3">
-                    <input class="form-control #(pageParams.usernameValidationClass)" id="username" placeholder="name@example.com or username" autocomplete="username"/>
-                    <label for="floatingInput">Email or username</label>
+                    <input class="form-control #(pageParams.usernameValidationClass)" id="username" 
+                    placeholder="name@example.com or username" autocomplete="username"
+                    aria-label="Email or username" aria-describedby="usrname_desc"/>
+                    <label for="floatingInput" id="usrname_desc">Email or username</label>
                     <div id="invalid_username" class="invalid-feedback fw-bold">
                         #(pageParams.invalidUsernameText)
                     </div>
                 </div>
+
+                <!-- password field with show / hide eye -->
                 <div class="row form-floating mb-3">
-                    <input type="password" class="form-control #(pageParams.passwordValidationClass)" id="password" placeholder="Password" autocomplete="current-password"/>
-                    <label for="floatingPassword">Password</label>
+                    <!-- <div class="input-group"> -->
+                        <input type="password"
+                        class="input form-control #(pageParams.passwordValidationClass)" id="password" 
+                        placeholder="password" required="true" autocomplete="current-password"
+                        aria-label="password" aria-describedby="password_desc">
+                        
+                        </input>
+                        <span class="col-md-1
+                                position-absolute top-0 end-0 mt-3">
+                            <i class="bi bi-eye-slash" style="color:grey;" id="togglePassword"></i>
+                        </span>
+                        <!-- <div class="input-group-append"> -->
+                            
+                        <!-- </div> -->
+                    <!-- </div> -->
+                    <label for="floatingPassword" id="password_desc">Password</label>
+                
+                    
+                    <!-- <input type="password" class="input form-control #(pageParams.passwordValidationClass)" 
+                        id="password" placeholder="Password" autocomplete="current-password"
+                        aria-label="password" aria-describedby="password_desc"/>
+                    <div class="input-group-append">
+                        <span>
+                            <i class="bi bi-eye-slash" id="togglePassword"></i>
+                        </span>
+                    </div>
+                    <label for="floatingPassword" id="password_desc">Password</label>
                     <div id="invalid_password" class="invalid-feedback fw-bold">
                         #(pageParams.invalidPasswordText)
-                    </div>
+                    </div> -->
                 </div>
+
+                <!-- remember me checkbox -->
                 <div class="row">
                     <label>
                         <input type="checkbox" value="remember-me" id="rememberme">&nbsp;Remember me
                     </label>
                 </div>
+
+                <!-- error text label -->
                 <div class="row mt-3">
                     <button class="w-100 btn btn-lg btn-primary" id="submit">Login</button>
                     <div class="row form-floating mt-3 mb-3">
@@ -55,6 +90,8 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ULA referral -->
                 <small class="text">By tapping/clicking the login button, you accept the
                     <a href="/dashboard/terms">terms of use.</a> and undertake them upon you and / or your employing organization.
                 </small>

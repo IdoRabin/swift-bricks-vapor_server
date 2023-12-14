@@ -6,6 +6,7 @@ const txtUsername = document.getElementById("username");
 const chkRememberMe = document.getElementById("rememberme");
 const btnSubmit = document.getElementById("submit");
 const webForm = document.getElementById("form");
+const togglePassword = document.getElementById('togglePassword');
 
 const STORAGE_REMEMBER_ME_KEY = "login/rememberme";
 const STORAGE_USERNAME_KEY    = "login/username";
@@ -71,6 +72,7 @@ const onsubmit = function(e) {
     return false;
 };
 
+
 const setUIEnabled = function(isEnabled) {
     txtPwd.disabled = !isEnabled;
     txtUsername.disabled = !isEnabled;
@@ -111,6 +113,8 @@ const saveLoginResult = function(success, json) {
 
         // Clear cookie as well
         cookies.remove('X-Bricks-Server-Cookie', { domain: window.location.hostname});
+        cookies.remove('X-Bricks Server-Cookie', { domain: window.location.hostname});
+        cookies.remove('X-Bricks-BTOK-Server-Cookie', { domain: window.location.hostname});
     }
 }
 
@@ -208,6 +212,16 @@ function updateUIForMessage(code, msg) {
     
 }
 
+const togglePasswordHandler = function(e) {
+    // See: https://www.geeksforgeeks.org/how-to-toggle-password-visibility-in-forms-using-bootstrap-icons/
+    // Toggle the type attribute using
+    // getAttribure() method
+    const type = txtPwd.getAttribute('type') === 'password' ? 'text' : 'password';
+    txtPwd.setAttribute('type', type);
+    // Toggle the eye and bi-eye icon
+    this.classList.toggle('bi-eye');
+}
+
 const submitHandler = function(e) {
     e.preventDefault();
     
@@ -282,3 +296,4 @@ txtPwd.addEventListener("input", passwordHandler);
 txtUsername.addEventListener("input", usernameHandler);
 chkRememberMe.addEventListener("input", chkboxHandler);
 btnSubmit.addEventListener("click", submitHandler);
+togglePassword.addEventListener("click", togglePasswordHandler);

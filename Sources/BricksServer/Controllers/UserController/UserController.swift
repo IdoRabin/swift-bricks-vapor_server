@@ -302,7 +302,7 @@ class UserController: AppRoutingController {
         req.saveToReqStore(key: ReqStorageKeys.selfUser, value: nil, alsoSaveToSession: true)
         req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: nil, alsoSaveToSession: true)
         req.saveToReqStore(key: ReqStorageKeys.loginInfos, value: nil, alsoSaveToSession: true)
-        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfoID, value: nil, alsoSaveToSession: true)
+        req.saveToReqStore(key: ReqStorageKeys.selfLoginInfo, value: nil, alsoSaveToSession: true)
         
         let sessionStartDate : Date? = req.routeContext.sessionStartDate ?? accessToken?.loginInfo?.latestLoginDate
         return UserLogoutResponse(user:selfUser, sessionStarted: sessionStartDate)

@@ -40,8 +40,7 @@ class DashboardController : AppRoutingController {
         let code = AppError.bestErrorCode(error)
         let reason = AppError.bestErrorReason(error)
         let appError = (error as? AppError) ??  AppError(code: AppErrorCode(rawValue: code)!, reason: reason)
-        let routeContext : MNRouteContext? = nil // XX try await MNRoutingBase.getOrCreateRouteContext(for: req)
-        routeContext?.setError(req: req, err: appError, errorOrigPath: origRoute, errReqId: req.id)
+        req.routeContext.setError(req: req, err: appError, errorOrigPath: origRoute, errReqId: req.id)
         
         if req.hasSession {
             // Reedirect
@@ -208,7 +207,7 @@ class DashboardController : AppRoutingController {
     func dboardLoginPage(_ req: Request) async throws {
         
         // Try to authenticate (without throwing) - see if any user is already logged in
-        await self.authenticateIfPossible(unknownReq: req)
+        await self.authenticateIfPossible(request: req)
         
         var contextPageParams : [String:String] = [:]
         // TODO: Reimplement error code evaluation
@@ -228,6 +227,10 @@ class DashboardController : AppRoutingController {
             
             
             switch aeCode {
+            case .http_stt_unauthorized:
+                isUsernameAndPwdInvalid = true
+                invalidUsernameAndPwdText = "User is not authorized."
+                
             case .user_login_failed:
                 isUsernameAndPwdInvalid = true
                 invalidUsernameAndPwdText = "Login has failed."
@@ -289,8 +292,6 @@ class DashboardController : AppRoutingController {
     }
     
     func dboardPage(_ req: Request) async throws -> View {
-        // req.routeContext.
-        
         let allParams : [String:String] = [:] // req.collatedAllParams()
         if Debug.IS_DEBUG {
             if (allParams.count > 0) {
@@ -325,7 +326,7 @@ class DashboardController : AppRoutingController {
     func dboardHome(_ req: Request) async throws -> View {
         
         // Try to authenticate (without throwing)
-        await self.authenticateIfPossible(unknownReq: req)
+        await self.authenticateIfPossible(request: req)
         
         // Context
         let routeContext = req.routeContext
@@ -338,7 +339,7 @@ class DashboardController : AppRoutingController {
     
     func dboardErrorPage(_ req: Request) async throws -> View {
         // dlog?.info("dboardErrorPage query: \(req.url.query.descOrNil)")
-        await self.authenticateIfPossible(unknownReq: req)
+        await self.authenticateIfPossible(request: req)
         
         let allParams : [String:String] = req.collatedAllParams()
         if Debug.IS_DEBUG {

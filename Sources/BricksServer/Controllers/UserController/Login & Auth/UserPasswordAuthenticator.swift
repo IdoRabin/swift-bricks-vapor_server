@@ -110,12 +110,6 @@ class UserPasswordAuthenticator : Vapor.AsyncMiddleware {
     /// Authenticate that the username and password are in the DB and valid (user may have multiple MNUserLoginInfos, i.e logins)
     /// NOTE: Assumes req storage has .user
     func authenticate(loginRequest: UserLoginRequest, for req: Vapor.Request) async throws {
-        dlog?.todo("REIMPLEMENT authenticate(basic:) for req:\(req.id)")
-    }
-    
-    func XXXauthenticate(loginRequest: UserLoginRequest, for req: Vapor.Request) async throws {
-        dlog?.info("authenticate(basic:) for req:\(req.id)")
-        
         // Check server is running
         guard let appServer = req.application.appServer, appServer.isBooting == false else {
             throw AppError(code: .http_stt_expectationFailed, reason: "Server not online")
@@ -134,39 +128,38 @@ class UserPasswordAuthenticator : Vapor.AsyncMiddleware {
         guard let user = users?.first else {
             throw AppError(code: .user_login_failed_user_not_found, reason: "User not found")
         }
-
-        do {
-            try await user.forceLoadAllPropsIfNeeded(db: req.db)
-            
-            dlog?.verbose("authenticate(basic:) found user: \(user)")
-            dlog?.verbose("authenticate(basic:) found \(user.loginInfos.count) loginInfos: \(user.loginInfos.piiStrings)")
-            var lastError : AppError? = nil
-            for loginInfo in user.loginInfos {
-                do {
-                    if try await self.authenticateLoginUserInfo(loginRequset: loginRequest, for: req, user:user, loginInfo: loginInfo) {
-                        // Was authenticated
-                        req.saveToReqStore(key: ReqStorageKeys.loginInfos, value: [loginInfo], alsoSaveToSession: true)
-                        // NOT NEEDED: we have req.auth . req.saveToReqStore(key: ReqStorageKeys.user, value: user, alsoSaveToSession: true)
-                        req.auth.login(user) // User auth in Vapor's internal system - needed for GuardMiddleware to operate correctly
-                        wasAuth = true
-                    }
-                } catch let error {
-                    lastError = AppError(code:.user_login_failed, reason:"login error authenticating", underlyingError: error)
+        
+        // Load loginInfos into the user if needed
+        try await user.forceLoadAllPropsIfNeeded(db: req.db)
+        
+        var lastError : AppError? = nil
+        let loginInfos = user.loginInfos
+        guard loginInfos.count > 0 else {
+            throw AppError(code: .user_login_failed_bad_credentials, reason: "Login info not found")
+        }
+        
+        for loginInfo in loginInfos {
+            do {
+                if try await self.authenticateLoginUserInfo(loginRequset: loginRequest, for: req, user:user, loginInfo: loginInfo) {
+                    // Was authenticated
+                    req.saveToReqStore(key: ReqStorageKeys.loginInfos, value: [loginInfo], alsoSaveToSession: true)
+                    // NOT NEEDED: we have req.auth . req.saveToReqStore(key: ReqStorageKeys.user, value: user, alsoSaveToSession: true)
+                    req.auth.login(user) // User auth in Vapor's internal system - needed for GuardMiddleware to operate correctly
+                    wasAuth = true
                 }
+            } catch let error {
+                lastError = AppError(code:.user_login_failed, reason:"login error authenticating", underlyingError: error)
             }
-            
-            if wasAuth {
-                dlog?.verbose(log: .success, "authenticate(basic:) SUCCESS for user: \(user)")
-            } else if let lastError = lastError {
-                // One of the iterations had an error:
-                throw lastError
-            } else {
-                // Unknown error
-                throw AppError(code: .user_login_failed_name_and_password, reason: "Username or password mismatch")
-            }
-        } catch let error {
-            dlog?.verbose(log: .note, "authenticate(basic:) failed to verifyPwdPlainText error: \(error)")
-            throw AppError(code: .user_login_failed_name_and_password, reason: "Login credentials issue (UPA)", underlyingError: error)
+        }
+        
+        if wasAuth {
+            dlog?.verbose(log: .success, "authenticate(basic:) SUCCESS for user: \(user)")
+        } else if let lastError = lastError {
+            // One of the iterations had an error:
+            throw lastError
+        } else {
+            // Unknown error
+            throw AppError(code: .user_login_failed_name_and_password, reason: "Username or password mismatch")
         }
     }
     

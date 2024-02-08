@@ -31,8 +31,15 @@ private extension Vapor.Application {
 
 @main
 enum Entrypoint {
+    static func shutdownPoolIfNeeded() {
+        // <EventLoopGroupConnectionPool<PostgresConnectionSource>: 0x60000237c800>
+        // let pool = EventLoopGroupConnectionPool<PostgresConnectionSource
+    }
+    
     static func main() async throws {
         dlog?.info("launch STARTED")
+        
+        self.shutdownPoolIfNeeded()
         
         var env = try Environment.detect()
         try LoggingSystem.bootstrap(from: &env)

@@ -12,7 +12,7 @@ import MNUtils
 import MNVaporUtils
 import DSLogger
 
-fileprivate let dlog : DSLogger? = DLog.forClass("UserController + Prefill")?.setting(verbose: true)
+fileprivate let dlog : DSLogger? = DconfigRateLimitMiddlewareLog.forClass("UserController + Prefill")?.setting(verbose: true)
 
 fileprivate struct UserControllerPrefill : AppPermissionGiver {
     
@@ -36,6 +36,12 @@ extension UserController /* +Prefill */ {
                                  strValue: "idorabin@gmail.com",
                                  domain: AppServer.DEFAULT_DOMAIN,
                                  hashedPwd: try UserPasswordAuthenticator.digestPwdPlainText(plainText: "123456"))
+            
+            guard try await self.dbFindUserLoginInfos(db: db, piiInfo: pii1, permissionGiver: globalAppServer!.defaultPersmissionGiver).count == 0 else {
+                dlog?.fail("prefillDebugUsersDataIfNeeded user [idorabin] already exists. (pre-check)")
+                return
+            }
+            
             var user : AppUser? = nil
             do {
                 user = try await AppServer.shared.users?.dbCreateUser(
@@ -70,6 +76,9 @@ extension UserController /* +Prefill */ {
     }
     
     func prefillAdminUsersData(db:Database, user prefillUser:AppUser? = nil) async throws {
+        guard Debug.IS_DEBUG else {
+            return
+        }
         
         dlog?.verbose("prefillAdminUsersData(app:user:\(prefillUser?.displayName ?? "<nil>" )")
         
@@ -84,6 +93,11 @@ extension UserController /* +Prefill */ {
                         strValue: piiUserName,
                         domain: adminDomain,
                         hashedPwd: piiUserPwdHashed)
+        
+        guard try await self.dbFindUserLoginInfos(db: db, piiInfo: pii, permissionGiver: globalAppServer!.defaultPersmissionGiver).count == 0 else {
+            dlog?.fail("prefillAdminUsersData user [\(piiUserDisplayName)] already exists. (pre-check)")
+            return
+        }
         
         try await db.transaction { db in
             let prefiller = UserControllerPrefill()

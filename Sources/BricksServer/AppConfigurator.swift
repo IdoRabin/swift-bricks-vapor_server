@@ -65,37 +65,7 @@ class AppConfigurator {
         dbName = "bserver-\(suffix)"
     }
     
-    private func createDBIfMissing( app: Application) {
-        // -- Database: bserver-staging
-        determineDBNameIfNeeded(app)
-        
-        // -- DROP DATABASE IF EXISTS "\(dbName)";
-    let queryString = """
-    CREATE DATABASE "\(dbName)"
-        WITH
-        OWNER = postgres
-        ENCODING = 'UTF8'
-        LC_COLLATE = 'en_US.UTF-8'
-        LC_CTYPE = 'en_US.UTF-8'
-        TABLESPACE = pg_default
-        CONNECTION LIMIT = -1;
-
-    GRANT TEMPORARY ON DATABASE "\(dbName)" TO vapor;
-
-    GRANT ALL ON DATABASE "\(dbName)" TO postgres;
-
-    GRANT TEMPORARY, CONNECT ON DATABASE "\(dbName)" TO PUBLIC;
-    """
-        let query = (app.db as? PostgresDatabase)?.query(queryString) // drop all tables
-        query?.whenComplete({ result in
-            switch result {
-            case .success(let succ):
-                dlog?.success("createDBIfMissing SUCCESS: \(succ)")
-            case .failure(let failure as NSError):
-                dlog?.raisePreconditionFailure("createDBIfMissing FAILED: \(failure.description)\n create DB manually: \"\(self.dbName)\"")
-            }
-        })
-    }
+    
     
     fileprivate func allRRabacMigrations( app: Application)->[Migration] {
         guard let rrabac = app.middleware(ofType: RRabacMiddleware.self) else {
@@ -254,16 +224,16 @@ class AppConfigurator {
         }
     }
 
-    private func asycConfigureDB(_ app: /* Vapor. */ Application) throws ->AppResult<String> {
-        let evloop = (AppServer.shared.vaporApplication?.eventLoopGroup.next())!
-        // evloop.makeFailedFuture(AppError(code:.db_failed_init, reason: "Unknown asycConfigureDB init error"))
-        
-        let result : AppResult<String> = try evloop.submit {
-            return AppResult<String>.success("DB CONFIG SUCCESS \(Date.now.ISO8601Format())")
-        }.wait()
-        
-        return result
-    }
+//    private func asycConfigureDB(_ app: /* Vapor. */ Application) throws ->AppResult<String> {
+//        let evloop = (AppServer.shared.vaporApplication?.eventLoopGroup.next())!
+//        // evloop.makeFailedFuture(AppError(code:.db_failed_init, reason: "Unknown asycConfigureDB init error"))
+//        
+//        let result : AppResult<String> = try evloop.submit {
+//            return AppResult<String>.success("DB CONFIG SUCCESS \(Date.now.ISO8601Format())")
+//        }.wait()
+//        
+//        return result
+//    }
     
     private func configureDB(_ app: /* Vapor. */ Application) throws {
         
@@ -329,7 +299,7 @@ class AppConfigurator {
         app.http.server.configuration.hostname = "127.0.0.1"
         app.http.server.configuration.port = 8081
         app.http.server.configuration.backlog = 128 //  length for the queue of pending connections
-        app.http.server.configuration.reuseAddress = false //  allows for reuse of local addresses when handling connections
+        app.http.server.configuration.reuseAddress = true //  allows for reuse of local addresses when handling connections - when false raises many onnectionPool did not shut down correctly if an unknown timeout has not passed between server sessions (eps when debugging).
         app.http.server.configuration.responseCompression = .disabled // Enable / disable response compressing with gzip
         app.http.server.configuration.requestDecompression = .enabled(limit: .size(256000))  // Enable / disable request decompression for incoming requests encoded w/ gzip // Setting decompression size limits can help prevent maliciously compressed HTTP requests from using large amounts of memory. // size: Maximum decompressed size in bytes. ratio: Maximum decompressed size as ratio of compressed bytes. none: No size limits.
         app.http.server.configuration.supportPipelining = false
@@ -360,6 +330,7 @@ class AppConfigurator {
         // JWT: Add HMAC with SHA-256 signer key
         app.jwt.signers.use(.hs256(key: AppConstants.ACCESS_TOKEN_JWT_KEY))
         app.routes.caseInsensitive = true
+        
     }
     
     // MARK: Debug / Mockup
@@ -442,27 +413,7 @@ class AppConfigurator {
             app.views.use(.leaf)
 
         } catch let error {
-            let desc = error.description
-            dlog?.warning("configure failed: \(desc)")
             
-            // Handle config errors:
-            switch error {
-            case let nserror as NSError:
-                switch (nserror.domain, nserror.code) {
-                case ("PostgresNIO.PSQLError", 1):
-                    if desc.matches(for: "Code.{0,6}3D000").count > 0 {
-                        dlog?.warning("Postgres DB not found. DB Named [\(dbName)] does not exist or not found under this server.")
-                        // dlog?.raisePreconditionFailure("DB Does not exist! [\(dbName)] - need to create DB from a DB Mgr or command line.")
-                        createDBIfMissing(app: app)
-                    } else {
-                        dlog?.warning("Postgres server not initialized / created. TERMINAL$ postgres -D /usr/local/var/postgres or otherwise start pg server.")
-                    }
-                default:
-                    break
-                }
-            default:
-                break
-            }
         }
         
         

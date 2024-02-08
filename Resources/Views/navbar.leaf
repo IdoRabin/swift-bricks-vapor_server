@@ -16,23 +16,24 @@
       </button> -->
       <!-- menu -->
       <ul class="navbar-nav collapse navbar-collapse p-0 m-0">
-        #if(isLoggedIn):
+        #if(is_logged_in):
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/dashboard/stats">Stats</a>
+              <a class="nav-link activable" aria-current="page" href="/dashboard/stats">Stats</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/dashboard/logs">Logs</a>
+              <a class="nav-link activable" href="/dashboard/logs">Logs</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/dashboard/roles">Roles</a>
+              <a class="nav-link activable" href="/dashboard/roles">Roles</a>
             </li>
               <li class="nav-item">
-            <a class="nav-link" href="/dashboard/users">Users</a>
+            <a class="nav-link activable" href="/dashboard/users">Users</a>
             </li>
         #endif
           <li class="nav-item">
-              <a class="nav-link" href="/dashboard/about">About</a>
+              <a class="nav-link activable" href="/dashboard/about">About</a>
           </li>
+
           <!-- Disabled item:
           <li class="nav-item">
             <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
@@ -53,7 +54,7 @@
     </div>
     <!-- right-side (end) menu -->
     <div class="collapse navbar-collapse nav p-1 m-0">
-      #if(isLoggedIn):
+      #if(is_logged_in):
           <!-- Top nav bar / menu  -->
           #extend("/common/avatar")
       #else:
@@ -66,3 +67,4 @@
     </div>
   </div>
 </nav>
+<script src="/web_scripts/navbar.js"></script>

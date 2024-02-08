@@ -29,6 +29,7 @@ extension UserController /* DB */ {
             // TODO: is this required? .filter(\.$piiType == piiConfig.piiType) ??
             .filter(\.$piiType ~~ /* in */ acceptedPIITypes)
             .with(\.$loginInfo) // load loginInfo parent
+            .with(\.$user) // load loginInfo parent
             .top(50) // for mem safety JIC
         
         guard userPIIs.count > 0 else {
@@ -45,7 +46,7 @@ extension UserController /* DB */ {
         
         // dlog?.info(">> \(piis.count) piis: \(piis)")
         let loginInfos = userPIIs.compactMap({ userPII in
-            if (userPII.loginInfo.user?.id == userPII.userId) {
+            if (userPII.loginInfo.$user.id == userPII.userId) {
                 return userPII.loginInfo
             }
             return nil // compactMap
@@ -53,7 +54,8 @@ extension UserController /* DB */ {
         
         // JIC
         guard userPIIs.count == loginInfos.count else {
-            throw MNError(code: .user_login_failed_password, reason: "User login infos has some dicreprencies. Please request support.")
+            
+            throw MNError(code: .user_login_failed_password, reason: "User login infos has some dicreprencies. Please request support.".mnDebug(add: "userPIIs.count: \(userPIIs.count) != loginInfos.count \(loginInfos.count)"))
         }
         
         return loginInfos

@@ -35,10 +35,16 @@
                 #import("body")
             </div>
         </div>
-        
+
+        <!-- Debug -->
+        <div class="main-body">
+        --- Dump: ---
+        <!-- #dumpContext -->
+        </div>
+
         <!-- Footers -->
         #extend("footer")
-        
+
         <!-- Bottom scripts -->
         
     </body>

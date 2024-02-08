@@ -1,7 +1,7 @@
 #extend("master"):
 #export("body"):
 
-#if(isLoggedIn):
+#if(is_logged_in):
      <div class="collapse show mt-sahdow" id="alertCollapse">
             <div class="alert alert-warning alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle-fill" style="color:orange;" ></i>
@@ -29,12 +29,12 @@
                 
                 <!-- username field -->
                 <div class="row form-floating mb-3">
-                    <input class="form-control #(pageParams.usernameValidationClass)" id="username" 
+                    <input class="form-control #(page_params.username_validation_class)" id="username" 
                     placeholder="name@example.com or username" autocomplete="username"
                     aria-label="Email or username" aria-describedby="usrname_desc"/>
                     <label for="floatingInput" id="usrname_desc">Email or username</label>
                     <div id="invalid_username" class="invalid-feedback fw-bold">
-                        #(pageParams.invalidUsernameText)
+                        #(page_params.invalid_username_text)
                     </div>
                 </div>
 
@@ -42,7 +42,7 @@
                 <div class="row form-floating mb-3">
                     <!-- <div class="input-group"> -->
                         <input type="password"
-                        class="input form-control #(pageParams.passwordValidationClass)" id="password" 
+                        class="input form-control #(page_params.password_validation_class)" id="password" 
                         placeholder="password" required="true" autocomplete="current-password"
                         aria-label="password" aria-describedby="password_desc">
                         
@@ -58,7 +58,7 @@
                     <label for="floatingPassword" id="password_desc">Password</label>
                 
                     
-                    <!-- <input type="password" class="input form-control #(pageParams.passwordValidationClass)" 
+                    <!-- <input type="password" class="input form-control #(page_params.password_validation_class)" 
                         id="password" placeholder="Password" autocomplete="current-password"
                         aria-label="password" aria-describedby="password_desc"/>
                     <div class="input-group-append">
@@ -68,7 +68,7 @@
                     </div>
                     <label for="floatingPassword" id="password_desc">Password</label>
                     <div id="invalid_password" class="invalid-feedback fw-bold">
-                        #(pageParams.invalidPasswordText)
+                        #(page_params.invalid_password_text)
                     </div> -->
                 </div>
 
@@ -83,10 +83,10 @@
                 <div class="row mt-3">
                     <button class="w-100 btn btn-lg btn-primary" id="submit">Login</button>
                     <div class="row form-floating mt-3 mb-3">
-                        <input type="hidden" class="#(pageParams.usernameAndPwdValidationClass)" id="global_warning"/>
+                        <input type="hidden" class="#(page_params.username_and_pwd_validation_class)" id="global_warning"/>
                         <label for="warning"></label>
                         <div id="invalid_global" class="invalid-feedback fw-bold" style="background-color=">
-                            #(pageParams.invalidUsernameAndPwdText)
+                            #(page_params.invalid_username_and_pwd_text)
                         </div>
                     </div>
                 </div>

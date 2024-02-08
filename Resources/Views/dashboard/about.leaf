@@ -12,7 +12,7 @@
             
             <!-- Buttons -->
             <div class="mt-3 d-flex justify-content-center">
-                #if(isLoggedIn):
+                #if(is_logged_in):
                 <ul class="nav col-12 col-lg-auto me-lg-auto justify-content-center mb-md-0">
                     <li><a href="/dashboard" role="button" class="btn btn-secondary me-2">Dashboard</a></li>
                     <li><a href="/dashboard/stats" role="button" class="btn btn-primary">Stats</a></li>

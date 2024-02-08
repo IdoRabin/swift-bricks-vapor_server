@@ -4,20 +4,20 @@
     data-bs-toggle="dropdown" 
     aria-expanded="false">
         <img    
-            #if(isLoggedIn):
-                src=#(userAvatarImageURL)
+            #if(is_logged_in && user_avatar_image_url):
+                src=#(user_avatar_image_url)
             #else:
                 src="/images/avatars/no_avatar.png"
             #endif
             class="rounded-circle"
             height="30 my-0 py-0"
-            alt="profile photo of #(userDisplayName)"
+            alt="profile photo of #(user_display_name)"
             loading="lazy"
             />
     </a>
     <ul class="dropdown-menu nav-dropdown dropdown-menu-end dropdown-menu-dark me-1"
         aria-labelledby="AvatarDropdownMenu">
-        <li class="my-0 py-0"><h6 class="dropdown-header pt-0 pb-1">#(userDisplayName)</h6></li>
+        <li class="my-0 py-0"><h6 class="dropdown-header pt-0 pb-1">#(user_display_name)</h6></li>
         <li><hr class="dropdown-divider my-1" style="border-color:grey;"></li>
         <li><a class="dropdown-item" href="/dashboard/edit_profile/">Edit profile..</a></li>
         <li><a class="dropdown-item" href="/dashboard/profile_settings/">Profile settings..</a></li>

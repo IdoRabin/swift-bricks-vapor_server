@@ -2,6 +2,8 @@
 #export("body"):
 <div class="users">
     Users body
+    #extend("/common/tableview")
+    </div>
 </div>
 #endexport
 #endextend

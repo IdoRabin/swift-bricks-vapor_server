@@ -275,7 +275,7 @@ class UserController: AppRoutingController {
         }
         
         // Clear access token and
-        var loginInfo = accessToken?.loginInfo
+        var loginInfo = accessToken?.loginInfo ?? req.getFromReqStore(key: ReqStorageKeys.selfLoginInfo, getFromSessionIfNotFound: true)
         if loginInfo == nil {
             try await accessToken?.forceLoadAllPropsIfNeeded(vaporRequest: req)
             loginInfo = accessToken?.loginInfo
@@ -293,9 +293,12 @@ class UserController: AppRoutingController {
         
         let now = Date.now
         loginInfo?.isLoggedIn = false
+        
         accessToken?.setWasUsedNow(now: now)
-        try await loginInfo?.save(on: req.db)
-        try await accessToken?.save(on: req.db)
+        dlog?.info("saving logout into db AT ID: \(accessToken?.$id.value?.uuidString ?? "<nil>" )")
+        try await loginInfo?.update(on: req.db)
+        try await accessToken?.update(on: req.db)
+        dlog?.info("saved logout intp db")
         
         // Save to req store
         req.saveToReqStore(key: ReqStorageKeys.accessToken, value: nil, alsoSaveToSession: true)

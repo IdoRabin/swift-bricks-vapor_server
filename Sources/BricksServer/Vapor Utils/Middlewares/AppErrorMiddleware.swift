@@ -7,6 +7,7 @@
 
 import Foundation
 import Vapor
+import LeafKit
 import DSLogger
 import MNUtils
 import MNVaporUtils
@@ -111,16 +112,22 @@ final class AppErrorMiddleware: Middleware {
         return nil
     }
     
-    public static func convert(request:Request, error:any Error) -> Response {
+    public static func convert(request:Request, error:any Error) ->  Response {
+        
+        if Debug.IS_DEBUG, let lexerError = error as? LexerError {
+            let jsonString = lexerError.serializeToJsonString(prettyPrint: true) ?? ""
+            dlog?.warning("Warning: HTML / Leaf lexer error." + jsonString)
+            return Response(status: .internalServerError, body: Response.Body(stringLiteral: jsonString))
+        }
+        
         let appError = (error as? AppError) ?? AppError(error:error)
         
-        dlog?.todo("Reimplement convert truple")
-//        if let truple = request.getError(byReqId: request.id), let route Context = request.route Context {
-//            route Context.setError(req:request, errorTruple: truple)
-//            request.routeHistory?.update(req: request, error: error)
-//        } else {
-//            dlog?.note("convert(request:error:) failed: \(request.method) \(request.url.string) has no route context / error !")
-//        }
+        if let truple = request.routeHistory.getError(byReqId: request.id) {
+            request.routeContext.setError(req:request, errorTruple: truple)
+            request.routeHistory.update(req: request, error: error)
+        } else {
+            dlog?.note("convert(request:error:) failed: \(request.method) \(request.url.string) has no route context / error !")
+        }
         
         // variables to determine
         let errComps = appError.headers(wasError:error)

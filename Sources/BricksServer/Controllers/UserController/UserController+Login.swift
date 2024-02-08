@@ -105,8 +105,9 @@ extension UserController {
 
         // Save lastUsed dates etc
         let now = Date.now
-        loginToken?.setWasUsedNow(isSaveOnDB: nil, now: now)
         loginInfo.setLoggedIn(true, now: now)
+        loginToken?.setWasUsedNow(isSaveOnDB: nil, now: now) // will update in db
+        
         // TODO: req?.routeContext?.isLoggedIn = true
         // TODO: Create a login/logout history record.
         
@@ -115,6 +116,7 @@ extension UserController {
             // DO NOT: req .auth .login(user)  - this is to be called in the various authenitation Middlewares.
             req.saveToReqStore(key: ReqStorageKeys.selfUser, value: user, alsoSaveToSession: true)
             req.saveToReqStore(key: ReqStorageKeys.selfUserID, value: user.id!.uuidString, alsoSaveToSession: true)
+            req.saveToReqStore(key: ReqStorageKeys.selfLoginInfo, value: loginInfo, alsoSaveToSession: true)
             
             // Note: loginToken may have been replaced!
             req.saveToReqStore(key: ReqStorageKeys.selfAccessToken, value: loginToken, alsoSaveToSession: true)
@@ -238,6 +240,13 @@ extension UserController {
                                        isHTTPOnly: !Debug.IS_DEBUG,
                                        sameSite: .lax) // HTTPCookies.SameSitePolicy.strict
         // Note this is the bearer token cookie name, not the session cookie
+        
+        // MDN says MAX cookie length = 4096 bytes
+        // While it may appear to be a strange joke, browsers do impose cookie limits. A browser should be able to accept at least 300 cookies with a maximum size of 4096 bytes, as stipulated by RFC 2109 (#6.3), RFC 2965 (#5.3), and RFC 6265. (including all parameters, so not just the value itself)
+        if cookie.string.count > 4096 - cookieName.count {
+            dlog?.warning("Created cookie is too long for ")
+        }
+        
         response.cookies[cookieName] = cookie
         // TODO: Detect TLS settings of server: cookie isSecure:true will make the client send the cookie only when calling HTTPS and not when calling HTTP..
         

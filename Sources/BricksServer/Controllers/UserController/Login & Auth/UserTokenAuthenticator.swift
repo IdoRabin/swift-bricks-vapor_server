@@ -40,7 +40,8 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         var cookieStr : String? = nil
         if cookieStr == nil {
             if let cookie = req.headers.cookie?[cookieName] {
-                dlog?.info("found bearer string in cookie: [\(cookieName)]")
+                // MDN says MAX cookie length = 4096 bytes
+                dlog?.verbose("found bearer string in cookie: [\(cookieName)] length:\(cookie.string.count)")
                 cookieStr = cookie.string
             }
         }
@@ -55,7 +56,7 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
                         let kv = part.split(separator: quads.2, maxSplits: 1)
                         if kv[0] == cookieName, kv.count == 2, kv[1].count > 0 && kv[1].count < 256 {
                             cookieStr = String(kv[1])
-                            dlog?.info("found bearer string in header [\(quads.0)] [\(quads.0)]")
+                            dlog?.verbose("found bearer string in header [\(quads.0)] [\(quads.0)]")
                             break loop
                         }
                     }
@@ -98,11 +99,18 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
             return
         }
         
-        guard let foundAccessToken = try await AppAccessToken.find(bearerToken: bearer.token, for: req) else {
-            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found or not valid")
+        var foundAccessToken : AppAccessToken? = nil
+        do {
+            foundAccessToken = try await AppAccessToken.find(bearerToken: bearer.token, for: req)
+        } catch let err {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found or not valid".mnDebug(add: " underlying: \(err.description)"))
         }
         
-        guard let foundUser = foundAccessToken.user else {
+        guard let foundAccessToken = foundAccessToken else {
+            throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "Access token not found.")
+        }
+        
+        guard let foundUser = foundAccessToken.$user.wrappedValue else {
             throw Abort(mnErrorCode: .http_stt_unauthorized, reason: "user not found".mnDebug(add: "recvdAccessToken userUIDString: \(foundAccessToken.userUIDString.descOrNil)"))
         }
 
@@ -143,5 +151,7 @@ class UserTokenAuthenticator : Vapor.AsyncBearerAuthenticator {
         foundAccessToken.setWasUsedNow(isSaveOnDB: req.db, now: nil) // set last updated date.
         
         dlog?.success("authenticate(bearer:) found user: [\(foundUser.displayName)] access token: \(foundAccessToken.id.descOrNil) loginInfo: \(foundLoginInfo.id.descOrNil)")
+        
+        try foundLoginInfo.throwPWDChangeIfNeeded()
     }
 }

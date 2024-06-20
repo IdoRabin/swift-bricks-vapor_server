@@ -1,0 +1,26 @@
+<a class="nav-link dropdown-toggle link-light mb-0" 
+    href="#" id="AvatarDropdownMenu" 
+    role="button" 
+    data-bs-toggle="dropdown" 
+    aria-expanded="false">
+        <img    
+            #if(is_logged_in):
+                src=#(user.avatarURL.relative)
+            #else:
+                src="/images/avatars/no_avatar.png"
+            #endif
+            class="rounded-circle"
+            height="30 my-0 py-0"
+            alt="profile photo of #(user_display_name)"
+            loading="lazy"
+            />
+</a>
+<ul class="dropdown-menu nav-dropdown dropdown-menu-end dropdown-menu-dark me-1"
+    aria-labelledby="AvatarDropdownMenu">
+    <li class="my-0 py-0"><h6 class="dropdown-header pt-0 pb-1">#(user.displayName)</h6></li>
+    <li><hr class="dropdown-divider my-1" style="border-color:grey;"></li>
+    <li><a class="dropdown-item" href="/dashboard/profile/edit">Edit profile..</a></li>
+    <li><a class="dropdown-item" href="/dashboard/profile/settings/">Profile settings..</a></li>
+    <li><hr class="dropdown-divider my-1" style="border-color:grey;"></li>
+    <li><a class="dropdown-item" href="/dashboard/logout" onClick="logout()">Logout..</a></li>
+</ul>

@@ -1,0 +1,32 @@
+#extend("master"):
+#export("body"):
+<div class="main">
+    <div class="row p-4 pb-0 align-items-center rounded-3 border shadow-lg">
+        <!-- leading segment -->
+        <div class="col-7 p-5 pt-3 pe-1 align-items-center">
+            <!-- Buttons -->
+            #if(is_logged_in):
+            Main master body dashboard - logged in
+            #else:
+                <h1 class="display-4 fw-bold lh-1">Bricks Dashboard</h1>
+                <p class="lead">
+                    Not logged in
+                </p>
+                <ul class="nav col-12 col-lg-auto me-lg-auto justify-content-center mb-md-0">
+                    <li><a href="/dashboard/login" role="button" class="btn btn-outline-dark me-2">Login now</a></li>
+                    <li><a href="/dashboard/register" role="button" class="btn btn-warning">Register</a></li>
+                </ul>
+            #endif
+        </div>
+        <!-- trailing segment -->
+        <div class="col-5 p-5 pt-3 ps-1 align-items-end">
+            
+        </div>
+    </div>
+</div>
+
+<!-- debug -->
+#extend("debugdump")
+
+#endexport
+#endextend

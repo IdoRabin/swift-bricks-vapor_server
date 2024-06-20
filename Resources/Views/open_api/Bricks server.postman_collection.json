@@ -1,0 +1,280 @@
+ {
+	"info": {
+		"_postman_id": "636e968d-5b2d-45d7-884f-8e3553292840",
+		"name": "Bricks server",
+		"description": "Server API for managing bricks app projects",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1358334"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get user full info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/:id/info",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								":id",
+								"info"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get the user's full info"
+					},
+					"response": []
+				},
+				{
+					"name": "Get user status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/:id/",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								":id",
+								""
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get user summary regaring their status info"
+					},
+					"response": []
+				},
+				{
+					"name": "Get user by username",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/by_username?username",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								"by_username"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": null
+								}
+							]
+						},
+						"description": "Get user summary regaring their status info, using their username / email / IIP"
+					},
+					"response": []
+				},
+				{
+					"name": "Update user info",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/:id/?user_info",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								":id",
+								""
+							],
+							"query": [
+								{
+									"key": "user_info",
+									"value": null
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update the user's full info  \nNOTE: A Field that does not appear in the request will not nillify an existing field value in the server,  \nA Field with a nil value will nillify the existing field in the server (if exists)  \nAn array will overwrite an existing array, hence elements not appearing in a provided array will be removed from the server"
+					},
+					"response": []
+				},
+				{
+					"name": "Create user",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/?user_info",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								""
+							],
+							"query": [
+								{
+									"key": "user_info",
+									"value": null
+								}
+							]
+						},
+						"description": "Create a user with the given minimal required info.  \nNOTE: many possible error codes and cases."
+					},
+					"response": []
+				},
+				{
+					"name": "Update user status",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/:id/?new_status",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								":id",
+								""
+							],
+							"query": [
+								{
+									"key": "new_status",
+									"value": null
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": ""
+								}
+							]
+						},
+						"description": "Change user's status  \nThe user status will change to thje provided value if allowed."
+					},
+					"response": []
+				},
+				{
+					"name": "login user",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/login",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								"login"
+							]
+						},
+						"description": "Login an existing user to the system if possible and allowed"
+					},
+					"response": []
+				},
+				{
+					"name": "logout user",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/user/logout",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"user",
+								"logout"
+							]
+						},
+						"description": "Logout an existing user from the system"
+					},
+					"response": []
+				}
+			],
+			"description": "All calls related to bricks system users.  \nNOTE: One may use \"me\" if the current user is logged in and a valid access token for the required user is sent as a param with the request according to the auth method."
+		},
+		{
+			"name": "Utils",
+			"item": [
+				{
+					"name": "list all routes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{localhost}}/util/all_routes",
+							"host": [
+								"{{localhost}}"
+							],
+							"path": [
+								"util",
+								"all_routes"
+							]
+						},
+						"description": "List all api routes for this server (excluding catchalls and aliases)"
+					},
+					"response": []
+				},
+				{
+					"name": "options check",
+					"request": {
+						"method": "OPTIONS",
+						"header": [],
+						"url": {
+							"raw": "api/v1/util/options_check",
+							"host": [
+								"util"
+							],
+							"path": [
+								"options_check"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Utility api calls, mainly for dev / debug purposes"
+		},
+		{
+			"name": "favicon.ico",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{localhost}}/favicon.ico",
+					"host": [
+						"{{localhost}}"
+					],
+					"path": [
+						"favicon.ico"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

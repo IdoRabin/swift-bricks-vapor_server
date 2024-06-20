@@ -1,0 +1,8 @@
+#extend("master"):
+#export("body"):
+<div class="users">
+    Users body
+    #extend("/common/fluent_leaf_table_view")
+</div>
+#endexport
+#endextend

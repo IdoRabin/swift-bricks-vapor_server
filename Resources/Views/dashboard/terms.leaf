@@ -1,0 +1,36 @@
+
+<script src="/web_scripts/terms.js"></script>
+#extend("master"):
+#export("body"):
+<div class="px-4 py-5 my-5 text-center">
+    <img class="d-block mx-auto mb-4" src="/images/app_icon_256-1.png" alt="" width="72" height="72">
+        <h1 class="display-5 fw-bold">Terms &amp; Conditions</h1>
+        <div class="col-lg-6 mx-auto">
+            <p class="lead mb-4">The use of this server is performed at the risk of the user or their employing company. No assurance for uptie or data accuracy or persistance is given at this early stage of development. beta</p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <button type="button" class="btn btn-primary btn-lg px-4 gap-3" onClick="copyTextToClipboard(window.location);" >Copy link</button>
+                <button type="button" class="btn btn-outline-secondary btn-lg px-4" onClick="sendBodyTextAsEmail()" >Send email</button>
+            </div>
+        </div>
+        <!-- separator: -->
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <div id="terms_document_text_div" class="col-lg-10 mx-auto text-start">
+            <h6 class="text-center">
+                <text class="text-end fs-5 fw-bold">Legal document or terms and conditions of use</text><br/>
+                <small>Please read carefully and forward to your legal service / aid / dept.</small>
+            </h6>
+            <h4 classs="lead">Terms:</h4>
+            <p class="lead mb-4">None. :question?semicolon;equals=not! Lorem ipsum terms. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi quis ultrices enim, quis tempus leo. Nunc tortor dui, elementum quis orci eget, cursus elementum nisi. Praesent non ex nec sem vulputate vulputate non et ex. Maecenas eget sem lorem. Sed blandit est vel sem tempor finibus. Aliquam suscipit nisi vitae lacus mollis pretium. Vestibulum sagittis a justo vitae aliquam.</p>
+            <h4>Conditions:</h4>
+            <p class="lead mb-4">Conditions. Vestibulum felis libero, pharetra nec tortor eget, faucibus maximus nisi. Aliquam maximus pretium iaculis. Suspendisse potenti. Suspendisse potenti. Fusce rutrum tellus ut convallis pulvinar. Nam mattis ut dolor in sagittis. Aliquam sed porta tellus, ac porta arcu. Phasellus aliquam, arcu ut lobortis ultricies, nisi elit faucibus enim, in malesuada elit leo vitae tellus.</p>
+            <h4>Bricks ltd. liability</h4>
+            <p class="lead mb-4">None. No liability at all. use at your own risk. Liability for beta product is none. Nunc ante mi, porta eget augue non, commodo sodales nunc. Vestibulum tristique, orci venenatis mollis interdum, felis risus pellentesque purus, eu gravida lorem ante egestas mi. Nulla mattis pharetra turpis a imperdiet. Duis sodales ipsum diam, nec suscipit quam sollicitudin vel. Nam hendrerit lorem et vehicula sodales. Interdum et malesuada fames ac ante ipsum primis in faucibus. Suspendisse dapibus commodo aliquet. Donec varius risus ac dui mattis convallis. Vestibulum sollicitudin lorem non nibh semper rhoncus. Curabitur vitae tellus elit. Aenean est purus, tempor id tristique aliquam, euismod non ligula. In eu justo at massa mollis varius. Etiam eu turpis elit. Vestibulum euismod sit amet dolor ut mollis. Etiam ultrices lacus vitae orci egestas lobortis.</p>
+            <h4>Bricks ltd. service:</h4>
+            <p class="lead mb-4">None. Quality of service may change and differ between costumers / users. Any service is not guarenteed at all. use at your own risk. No assurance  as to even address / check or react to a user's / cutomrs service / support request is given. Nunc ante mi, porta eget augue non, commodo sodales nunc. Vestibulum tristique, orci venenatis mollis interdum, felis risus pellentesque purus, eu gravida lorem ante egestas mi. Nulla mattis pharetra turpis a imperdiet. Duis sodales ipsum diam, nec suscipit quam sollicitudin vel. Nam hendrerit lorem et vehicula sodales. Interdum et malesuada fames ac ante ipsum primis in faucibus. Suspendisse dapibus commodo aliquet. Donec varius risus ac dui mattis convallis. Vestibulum sollicitudin lorem non nibh semper rhoncus. Curabitur vitae tellus elit. Aenean est purus, tempor id tristique aliquam, euismod non ligula. In eu justo at massa mollis varius. Etiam eu turpis elit. Vestibulum euismod sit amet dolor ut mollis. Etiam ultrices lacus vitae orci egestas lobortis.</p>
+        </div>
+</div>
+#endexport
+#endextend

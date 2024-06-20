@@ -1,0 +1,7 @@
+#extend("master"):
+#export("body"):
+<div class="Terms">
+    Logs body
+</div>
+#endexport
+#endextend

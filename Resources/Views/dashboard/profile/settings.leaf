@@ -1,0 +1,7 @@
+#extend("master"):
+#export("body"):
+<div class="profile_settings">
+    Profile settings
+</div>
+#endexport
+#endextend

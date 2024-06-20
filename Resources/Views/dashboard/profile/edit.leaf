@@ -1,0 +1,7 @@
+#extend("master"):
+#export("body"):
+<div class="edit_profile">
+    Edit profile body
+</div>
+#endexport
+#endextend

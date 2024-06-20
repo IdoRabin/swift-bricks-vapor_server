@@ -1,0 +1,70 @@
+<nav class="navbar navbar-expand-sm navbar-dark bg-dark p-0 m-0">
+  <div id="navbar-internal-container" class="container-fluid p-0 m-0">
+    <!-- brand -->
+    <div id="navbar-branding" class="nav-item">
+      <a href="/dashboard" class="nav-link text-white d-flex align-items-center">
+        <img src="/images/app_icon/app_icon_256.png" class="rounded mx-2"
+              alt="Bricks logo" style="width:32px;height:32px;">
+        </img>
+        <strong>Bricks&nbsp;Dashboard</strong>
+      </a>
+    </div>
+    <div class="container-fluid" id="navbarSupportedContent">
+      <!--  TODO: fix collapse
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button> -->
+      <!-- menu -->
+      <ul class="navbar-nav collapse navbar-collapse p-0 m-0">
+        #if(is_logged_in):
+            <li class="nav-item">
+              <a class="nav-link activable" aria-current="page" href="/dashboard/stats">Stats</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link activable" href="/dashboard/logs">Logs</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link activable" href="/dashboard/roles">Roles</a>
+            </li>
+              <li class="nav-item">
+            <a class="nav-link activable" href="/dashboard/users">Users</a>
+            </li>
+        #endif
+          <li class="nav-item">
+              <a class="nav-link activable" href="/dashboard/about">About</a>
+          </li>
+
+          <!-- Disabled item:
+          <li class="nav-item">
+            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>
+          </li> -->
+          <!-- DropDown menu:
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Dropdown
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="#">Action</a></li>
+              <li><a class="dropdown-item" href="#">Another action</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="#">Something else here</a></li>
+            </ul>
+          </li> -->
+      </ul>
+    </div>
+    <!-- right-side (end) menu -->
+    <div class="collapse navbar-collapse nav p-1 m-0">
+      #if(is_logged_in):
+          <!-- Top nav bar / menu  -->
+          #extend("/common/avatar")
+      #else:
+          <!-- login/register:  -->
+          <ul class="navbar-nav">
+              <li><a href="/dashboard/login" role="button" class="btn btn-sm btn-outline-light me-2">Login</a></li>
+              <li><a href="/dashboard/register" role="button" class="btn btn-sm btn-warning">Register</a></li>
+          </ul>
+      #endif
+    </div>
+  </div>
+</nav>
+<script src="/web_scripts/navbar.js"></script>

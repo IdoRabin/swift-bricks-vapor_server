@@ -1,0 +1,8 @@
+<div class="container font-monospace">
+    <small class="opacity-60">
+        <b>Debug dump: </b></br>
+    </small>
+    <small class="text-secondary opacity-60">
+        #dumpContext
+    </small>
+</div>

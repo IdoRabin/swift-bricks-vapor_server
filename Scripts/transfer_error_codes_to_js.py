@@ -16,8 +16,8 @@ import fileinput
 from tempfile import NamedTemporaryFile
 from datetime import datetime
 
-SOURCE_FILEPATH = '/Users/syncme/vapor/bserver/Sources/App/App specific/AppError/AppErrorCode.swift'
-TARGET_FILEPATH = '/Users/syncme/vapor/bserver/Public/web_scripts/error_codes.js'
+SOURCE_FILEPATH = '/Users/ido/vapor/bserver/Sources/App/App specific/AppError/AppErrorCode.swift'
+TARGET_FILEPATH = '/Users/ido/vapor/bserver/Public/web_scripts/error_codes.js'
 
 print(f'= transfer_error_codes_to_js.py is starting: =')
 

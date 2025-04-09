@@ -17,8 +17,8 @@ import fileinput
 from tempfile import NamedTemporaryFile
 from datetime import datetime
 
-SOURCE_FILEPATH = '/Users/syncme/vapor/bserver/Sources/App/App specific/AppError/AppErrorCode.swift'
-TARGET_FILEPATH = '/Users/syncme/vapor/bserver/Sources/App/App specific/AppError/AppErrorDomain.swift'
+SOURCE_FILEPATH = '/Users/ido/vapor/bserver/Sources/App/App specific/AppError/AppErrorCode.swift'
+TARGET_FILEPATH = '/Users/ido/vapor/bserver/Sources/App/App specific/AppError/AppErrorDomain.swift'
 
 print(f'= transfer_error_codes_to_domains.py is starting: =')
 

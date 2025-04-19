@@ -19,7 +19,7 @@ let package = Package(
         // >>> .package(path: "../../xcode/MNUtils/MNUtils"), // from: "0.0.2"
         .package(path: "../../xcode/MNSettings2/MNSettings2"), // from: "0.0.2"
         // >>> .package(path: "../../vapor/MNVaporUtils/"), // from: "0.0.2"
-        .package(path: "../../vapor/RRabac"), // from: "0.0.1"
+        .package(path: "../../vapor/RRabac") // from: "0.0.1"
     ],
     targets: [
         .executableTarget(
